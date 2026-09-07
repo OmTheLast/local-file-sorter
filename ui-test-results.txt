@@ -2,3 +2,6 @@ Native sample app: preview loaded 8 files, skipped 1 partial download.
 UI selected move and Undo succeeded.
 Watcher: open writer stayed in source beyond 15 seconds; stable new file moved after close; incomplete download and existing baseline files stayed untouched.
 Final release: main app opened with Downloads -> Documents/Sorted Files, zero history and automation disabled. Category editor opened and cancelled without changes. Sample app rebuilt with the corrected classifier and isolated folder controls. Both ad-hoc code signatures verified.
+Interface update: separate Review files / History / Automatic sorting / Settings pages; compact folder names and expandable paths; Needs review filter; one final Approve & sort confirmation.
+Native sample checks: scan cancellation returned to Scan files; automation was blocked before a preview; cancelling move approval left the file queued; confirming moved only the selected fixture; History -> Undo move restored it. All 17 safety suites passed again.
+During interface verification, Apple Intelligence reported available but generation failed in both the app and an independent minimal Foundation Models probe (underlying ModelManagerServices error). Fallback to Needs Review remained usable. The existing 20/20 report records the earlier successful classification evaluation, not this runtime state.

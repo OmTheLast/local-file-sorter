@@ -7,9 +7,10 @@ import SorterCore
     @Published var proposals: [Proposal] = []
     @Published var history: [MoveRecord] = []
     @Published var skipped: [String] = []
-    @Published var status = "Preview mode. Choose Scan preview to inspect files; nothing moves until you approve."
+    @Published var status = "Preview mode. Scan your folder to get started. Nothing moves until you confirm."
     @Published var modelStatus = Classifier.modelStatus
     @Published var busy = false
+    @Published var scanning = false
     @Published var automation = false
     @Published var allowAIAutomation = false
     @Published var previewApproved = false
@@ -81,7 +82,7 @@ import SorterCore
         }
     }
     func scan() {
-        guard !busy, let engine else { return }; pause(); busy = true; previewApproved = false; hasPreview = false
+        guard !busy, let engine else { return }; pause(); busy = true; scanning = true; previewApproved = false; hasPreview = false
         let snapshot = settings
         operation = Task {
             do {
@@ -95,7 +96,7 @@ import SorterCore
                 modelStatus = Classifier.modelStatus
             } catch is CancellationError { status = "Preview cancelled. No files moved." }
             catch { self.error = error.localizedDescription }
-            busy = false
+            busy = false; scanning = false
         }
     }
     func cancelScan() { operation?.cancel() }
@@ -119,7 +120,7 @@ import SorterCore
                     proposals.removeAll { $0.id == proposal.id }; moved += 1
                 } catch { failures.append("\(proposal.source.lastPathComponent): \(error.localizedDescription)") }
             }
-            refreshHistory(); status = "Moved \(moved) approved files. Every completed move is in History."
+            refreshHistory(); status = "Sorted \(moved) \(moved == 1 ? "file" : "files"). You can undo moves in History."
             if !failures.isEmpty { self.error = failures.joined(separator: "\n") }
             busy = false
         }
@@ -167,7 +168,7 @@ import SorterCore
         operation = Task {
             do {
                 let restored = try await engine.undo(record.id)
-                status = "\(restored.note ?? "Restored") \(restored.undoDestination?.path ?? "")"
+                status = restored.note ?? "File restored. See History for its location."
                 proposals = []; hasPreview = false; previewApproved = false
             } catch { self.error = error.localizedDescription }
             refreshHistory(); busy = false
