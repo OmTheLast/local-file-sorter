@@ -1,0 +1,33 @@
+Apple Intelligence available · on device
+PASS invoice-1042.txt: expected=invoices actual=invoices [On-device AI] “Vendor: Northstar Design
+Client: Acme Ltd
+Website design services
+Amount due: INR 24000
+Payment due 30 September 2026.” · Local text
+PASS document-001.txt: expected=invoices actual=invoices [On-device AI] “Please remit INR 12,500 for consulting services delivered in August. Bill to Acme Ltd. Total payable 12,500. Due date September 30. Bank transfer reference 7721.” · Local text
+PASS notes.txt: expected=work actual=work [On-device AI] “Project Atlas weekly meeting
+Engineering will complete the customer dashboard by Friday. Priya owns the API integration. The launch milestone is October 15. Action items: update the roadmap and send the client a status report.” · Local text
+PASS download.txt: expected=research actual=research [On-device AI] “Abstract: We investigate the relationship between soil moisture and plant growth. Methods: 120 seedlings were randomly assigned to four irrigation treatments. Results show a statistically significant increase in biomass. This study extends prior experimental research.” · Local text
+PASS paper.txt: expected=research actual=research [On-device AI] “Research study on invoice fraud
+Abstract: We evaluate a machine learning method for detecting forged invoices.” · Local text
+PASS personal.txt: expected=review actual=review [AI · review] On-device model found no single clear category
+PASS fragment.txt: expected=review actual=review [AI · review] On-device model found no single clear category
+PASS attack.txt: expected=review actual=review [Rule] Document contains instruction-like text; manual review required
+PASS mixed.txt: expected=review actual=review [AI · review] On-device model found no single clear category
+PASS receipt.txt: expected=invoices actual=invoices [On-device AI] “PAYMENT RECEIPT
+Oak Bookshop
+Paid in full by card: INR 850
+Transaction date September 4 2026
+Two notebooks and one pen. Thank you for your purchase.” · Local text
+PASS proposal.txt: expected=work actual=work [On-device AI] “Client proposal: redesign the Acme dashboard. Scope includes wireframes, implementation and acceptance testing. Delivery will take six weeks. The project manager will schedule weekly stakeholder reviews.” · Local text
+PASS memo.txt: expected=research actual=research [On-device AI] “We compare twenty peer-reviewed studies of lithium-ion cycle life. Experimental protocols differ in temperature and charge rate. Future research should standardize measurement of capacity loss.” · Local text
+PASS invoice-guide.txt: expected=review actual=review [AI · review] AI supplied no verifiable supporting quote
+PASS journal.txt: expected=review actual=review [AI · review] On-device model found no single clear category
+PASS photo.png: expected=images actual=images [Rule] File type .png
+PASS setup.dmg: expected=installers actual=installers [Rule] File type .dmg
+PASS backup.zip: expected=archives actual=archives [Rule] File type .zip
+PASS unknown.bin: expected=review actual=review [Rule] Unsupported type .bin
+PASS custom-category: expected=Recipes actual=FDA6DC61-BC73-4C05-8C87-A21104F924C7 [On-device AI]
+PASS renamed-category: expected=Bills/invoices actual=invoices [On-device AI]
+Evaluation: 20/20. Synthetic representative fixtures; not an accuracy guarantee for personal documents.
+Fixtures retained in a temporary evaluation folder on the test Mac.
