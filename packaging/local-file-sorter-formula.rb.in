@@ -2,7 +2,6 @@ class LocalFileSorter < Formula
   desc "Sort downloads using rules and on-device Apple Intelligence"
   homepage "https://github.com/OmTheLast/local-file-sorter"
   url "https://github.com/OmTheLast/local-file-sorter/releases/download/v@VERSION@/LocalFileSorter-@VERSION@-source.tar.gz"
-  version "@VERSION@"
   sha256 "@SHA256@"
 
   depends_on arch: :arm64
