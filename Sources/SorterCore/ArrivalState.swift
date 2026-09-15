@@ -30,7 +30,7 @@ public struct ArrivalState: Codable, Sendable {
         }
         return paths
     }
-    public static func load(journal: Journal, source: URL, defaultEnabled: Bool) throws -> ArrivalState {
+    public static func load(journal: Journal, source: URL, defaultEnabled: Bool = false) throws -> ArrivalState {
         let file = journal.folder.appendingPathComponent("automation.json")
         if FileSafety.exists(file) {
             try FileSafety.validatePath(file)

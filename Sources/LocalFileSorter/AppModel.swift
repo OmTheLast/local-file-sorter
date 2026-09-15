@@ -59,7 +59,7 @@ import SorterCore
             if !isDemo, let saved = try journal.loadSettings() { settings = saved }
             try journal.recover(); history = try journal.records()
             self.journal = journal; engine = SorterEngine(journal: journal)
-            arrivals = try ArrivalState.load(journal: journal, source: settings.source, defaultEnabled: !isDemo)
+            arrivals = try ArrivalState.load(journal: journal, source: settings.source)
             if isDemo { status = "Sample files only. Your Downloads are untouched." }
             if arrivals?.enabled == true { enableAutomation() }
             else { status = "Automatic sorting is paused. Resume to sort new downloads." }

@@ -266,6 +266,25 @@ final class SafetyTests {
         let afterUndo = try ArrivalState.load(journal: journal, source: settings.source, defaultEnabled: true)
         XCTAssertTrue(try afterUndo.excludedPaths().contains(newImage.path))
     }
+    func testFirstInstallOptInAndUpgrade() async throws {
+        let (_, settings, journal, engine) = try fixture()
+        let original = settings.source.appendingPathComponent("existing.png")
+        try write(original)
+        var state = try ArrivalState.load(journal: journal, source: settings.source)
+        XCTAssertFalse(state.enabled)
+        let arrival = settings.source.appendingPathComponent("after-setup.png")
+        try write(arrival)
+        let result = try await engine.sortNewArrivals(settings: settings, state: state)
+        XCTAssertTrue(result.moved.isEmpty)
+        XCTAssertTrue(FileSafety.exists(arrival))
+        // Upgrades preserve explicit opt-in even though fresh installs default off.
+        state.enabled = true
+        try state.save(journal: journal)
+        let upgraded = try ArrivalState.load(journal: journal, source: settings.source)
+        XCTAssertTrue(upgraded.enabled)
+        XCTAssertTrue(try upgraded.excludedPaths().contains(original.path))
+        XCTAssertFalse(try upgraded.excludedPaths().contains(arrival.path))
+    }
     func testOriginalEditsAndNewSameName() throws {
         let (_, settings, journal, _) = try fixture()
         let file = settings.source.appendingPathComponent("same.png"); try write(file)

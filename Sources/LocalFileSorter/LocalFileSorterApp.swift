@@ -280,7 +280,7 @@ struct ContentView: View {
                 Button("Open Sorted Files", systemImage: "folder") { model.reveal(model.settings.destination) }
                 Button("View history") { page = .history }
             }
-            Text(model.demo ? "This sample app watches only its temporary folder. Your actual Downloads are untouched." : "Pause is remembered across restarts. Quit stops sorting until the app is opened again or you log in.")
+            Text(model.demo ? "This sample app watches only its temporary folder. Your actual Downloads are untouched." : "Pause is remembered across restarts. Quit stops sorting until the app is opened again. To start at login, add it in System Settings → General → Login Items.")
                 .font(.caption).foregroundStyle(.secondary)
             Spacer(minLength: 0)
         }

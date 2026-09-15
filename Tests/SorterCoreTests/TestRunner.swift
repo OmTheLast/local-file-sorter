@@ -43,6 +43,7 @@ func XCTUnwrap<T>(_ value: T?) throws -> T { guard let value else { throw NSErro
             ("native PDF / DOC / ODT local extraction", { try suite.testNativePDFAndLegacyOfficeExtraction() }),
             ("extraction limits and subprocess timeout", { try await suite.testExtractionLimitsAndTimeout() }),
             ("persistent arrivals, automatic fallback, pause and undo", { try await suite.testPersistentArrivalsAndAutomaticFallback() }),
+            ("first-install opt-in and upgrade preserves automation", { try await suite.testFirstInstallOptInAndUpgrade() }),
             ("original edits, same-name new download and corrupt automation state", { try suite.testOriginalEditsAndNewSameName() })
         ]
         for (name, test) in tests {
