@@ -1,16 +1,24 @@
-# Local File Sorter 0.3.0 — Homebrew packaging candidate
+# Local File Sorter 0.3.0 — free Homebrew source release
 
-**Draft only.** The attached candidate is ad-hoc signed and has not been notarized. Gatekeeper rejects it. It is for local packaging review, not a public installable release. Replace the archive, checksum, cask and provenance together with a Developer ID signed/notarized build before publishing.
+Install a small native Mac utility that sorts finished downloads using file-type rules and Apple's on-device Foundation Models. The Homebrew formula builds the app on your Mac: **no paid Apple Developer membership or signing certificate is needed**.
 
-A native, local Mac utility that automatically sorts finished downloads into Invoices, Work, Research, Images, Installers, Archives and Needs Review. Folders and categories are configurable. Clear file types use rules; documents use Apple's on-device Foundation Models with local text extraction and PDF OCR. No cloud classification, API keys or paid runtime dependencies.
+Requirements: Apple Silicon, macOS 26+, Homebrew and Apple's free Command Line Tools with a macOS 26+ SDK. Full Xcode is not required.
 
-- Apple Silicon, macOS 26 or later. Apple Intelligence is optional: rules and Needs Review remain usable without it.
-- First launch starts paused. Enable once to sort subsequent downloads without per-file approval. Upgrades preserve the existing enabled/paused choice.
-- Waits for downloads/writers to settle; existing files remain excluded from automation.
-- Preserves filenames, never overwrites existing destinations, and records moves with conflict-safe Undo.
-- Keeps sorting when the window closes. Login startup is an explicit user choice.
-- Cask installation/removal preserves sorted files, configuration and undo history.
+```sh
+brew tap omthelast/local-file-sorter https://github.com/OmTheLast/local-file-sorter
+brew install omthelast/local-file-sorter/local-file-sorter
+local-file-sorter
+```
 
-The release ZIP contains only the native app. A SHA-256 checksum, generated cask, source/build provenance and 20-suite safety report accompany it. Homebrew installation and removal were tested using the real archive in an isolated temporary directory. Signing/notarization, clean-user Gatekeeper launch, actual Homebrew upgrade and logout/login remain untested.
+- Enable automatic sorting once; subsequent finished downloads need no per-file approval. Fresh installations start paused, and upgrades preserve the saved choice.
+- Configurable folders and categories: Invoices, Work, Research, Images, Installers, Archives and Needs Review.
+- Local document extraction, scanned-PDF OCR and on-device AI. Rules and Needs Review remain usable when Apple Intelligence is unavailable.
+- Preserves filenames, waits for writes to finish, avoids overwriting files and records moves with conflict-safe Undo.
+- Continues sorting when the window closes. Login startup is an explicit user choice in System Settings.
+- No cloud AI, API key, paid runtime dependency or Gatekeeper/quarantine workaround.
 
-This is an early prototype. Office extraction has limits, cross-volume moves fail safely, and classification can be wrong. Review History and Needs Review periodically. See the README and `docs/RELEASING.md` for supported formats, limits and release instructions.
+The downloadable artifact contains source code, not a precompiled app. Its SHA-256 and source commit accompany it. The formula downloads that source, builds locally and gives the new app an ad-hoc integrity signature. It is not an Apple-notarized binary and does not claim to be one.
+
+The 20-suite safety tests cover opt-in, file stability, moves/undo, extraction and recovery. See the attached source-release verification report for Homebrew build and launch results. Fresh-account installs, real version-to-version upgrades and logout/login have not been tested.
+
+This remains an early prototype: classification can be wrong, extraction has limits, and cross-volume moves fail safely. Review History and Needs Review periodically. See the README and `docs/RELEASING.md` for details.

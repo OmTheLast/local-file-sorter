@@ -1,12 +1,20 @@
 # Local File Sorter · macOS prototype
 
-**Homebrew packaging:** version 0.3.0 is prepared as a local cask candidate. Public binary distribution awaits Developer ID signing and Apple notarization. See [release instructions](docs/RELEASING.md). There is no live Homebrew install command yet.
+**Free Homebrew source installation:** no Apple Developer membership or paid dependency is needed. Homebrew compiles the app on your Mac using Apple's free Command Line Tools (macOS 26+ SDK).
+
+```sh
+brew tap omthelast/local-file-sorter https://github.com/OmTheLast/local-file-sorter
+brew install omthelast/local-file-sorter/local-file-sorter
+local-file-sorter
+```
+
+Requires Apple Silicon and macOS 26+. [Installation, updates and release instructions](docs/RELEASING.md).
 
 A small native SwiftUI utility for this Mac. It uses deterministic file-type rules, PDFKit, Vision OCR, and Apple's on-device Foundation Models. No packages, API keys, cloud AI, telemetry, or paid dependencies are included.
 
 ## Automatic downloads
 
-Open `dist/Local File Sorter.app`, or double-click `Launch.command` (builds it on first use). On a fresh installation, select **Resume automatic sorting** to start watching `~/Downloads` and sort finished arrivals into `~/Documents/Sorted Files`. Version 0.3.0 starts paused until that first opt-in; upgrades preserve your saved mode. There is no preview or per-file approval for new downloads. Existing files present at first setup are recorded locally and excluded, including after app restarts and edits/renames within the source. New files arriving while paused or while the app is closed are processed after resuming. A new file reusing an old filename is detected by file identity.
+Run `local-file-sorter` after Homebrew installation. For a source checkout, open `dist/Local File Sorter.app` or double-click `Launch.command` (builds it on first use). On a fresh installation, select **Resume automatic sorting** to start watching `~/Downloads` and sort finished arrivals into `~/Documents/Sorted Files`. Version 0.3.0 starts paused until that first opt-in; upgrades preserve your saved mode. There is no preview or per-file approval for new downloads. Existing files present at first setup are recorded locally and excluded, including after app restarts and edits/renames within the source. New files arriving while paused or while the app is closed are processed after resuming. A new file reusing an old filename is detected by file identity.
 
 - **Downloads** shows the automatic-sorter status and Pause/Resume.
 - **History** shows moves and **Undo move**. Undo pauses sorting and remembers the restored file so it is not automatically sorted again. Resume when ready.
@@ -70,7 +78,7 @@ Extraction is capped at 30 MB per document, eight PDF pages and 6,000 text chara
 
 Apple Pages/Numbers/Keynote documents, legacy XLS/PPT, handwriting, image-only Office documents, unusually encoded text and password-protected documents are not comprehensively supported; review them manually. Standalone images use the Images rule; scanned **PDFs** receive OCR. Complex real-world Office files, multilingual/poor-quality scans and your personal Downloads have not been evaluated. Login-agent startup was exercised directly; a full logout/login was not performed. A sudden power loss, disk-full filesystem, actual Apple Intelligence disabled/model-downloading state, and sleep/wake stress have not been induced. Interrupted journal states, corrupted history, disabled-AI fallback and subprocess timeout were tested instead.
 
-The app is locally ad-hoc signed, not notarized or sandboxed for App Store distribution. It needs no full Xcode installation to build. It is a local prototype. New release installations require one explicit opt-in to automatic sorting; existing saved choices are preserved.
+The Homebrew formula compiles and ad-hoc signs the app locally without a Developer ID certificate. It is not an Apple-notarized binary or an App Store package. It needs no full Xcode installation to build. It is a local prototype. New release installations require one explicit opt-in to automatic sorting; existing saved choices are preserved.
 
 ## Rebuild and rerun
 

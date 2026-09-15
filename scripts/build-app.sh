@@ -3,11 +3,13 @@ set -euo pipefail
 cd "${0:A:h}/.."
 SIGNED=0
 SAMPLES=1
+HOMEBREW_BUILD=0
 for option in "$@"; do
   case "$option" in
+    --homebrew) HOMEBREW_BUILD=1 ;;
     --signed) SIGNED=1 ;;
     --no-samples) SAMPLES=0 ;;
-    *) print -u2 "Usage: $0 [--signed] [--no-samples]"; exit 2 ;;
+    *) print -u2 "Usage: $0 [--signed] [--no-samples] [--homebrew]"; exit 2 ;;
   esac
 done
 if [[ "$SIGNED" == 1 && -z "${SIGNING_IDENTITY:-}" ]]; then
@@ -18,32 +20,42 @@ fi
 APP_VERSION="$(<VERSION)"
 APP_BUILD="$(<BUILD_NUMBER)"
 [[ "$APP_VERSION" =~ '^[0-9]+\.[0-9]+\.[0-9]+$' && "$APP_BUILD" =~ '^[0-9]+$' ]] || { print -u2 'Invalid VERSION or BUILD_NUMBER.'; exit 1; }
-swift build -c release --arch arm64 --product LocalFileSorter
-BIN_DIR="$(swift build -c release --arch arm64 --show-bin-path)"
+SDK_VERSION="$(/usr/bin/xcrun --sdk macosx --show-sdk-version)"
+[[ "${SDK_VERSION%%.*}" -ge 26 ]] || { print -u2 'Install Apple Command Line Tools with the macOS 26 SDK or newer.'; exit 1; }
+SWIFT_ARGS=(-c release --arch arm64)
+if [[ "$HOMEBREW_BUILD" == 1 ]]; then
+  # Homebrew already sandboxes the build. Nested Swift manifest/macro sandboxes
+  # fail on macOS; disable only the nested layers, leaving Homebrew's in place.
+  SWIFT_ARGS+=(--disable-sandbox --cache-path "$PWD/.build/swiftpm-cache" -Xswiftc -disable-sandbox)
+  export CLANG_MODULE_CACHE_PATH="$PWD/.build/clang-cache"
+  export SWIFTPM_MODULECACHE_OVERRIDE="$PWD/.build/swift-cache"
+fi
+swift build "${SWIFT_ARGS[@]}" --product LocalFileSorter
+BIN_DIR="$(swift build "${SWIFT_ARGS[@]}" --show-bin-path)"
 mkdir -p dist
 STAGING="$(mktemp -d "$PWD/dist/build.XXXXXX")"
 trap 'rm -rf "$STAGING"' EXIT
 APP="$STAGING/Local File Sorter.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/LocalFileSorter" "$APP/Contents/MacOS/LocalFileSorter"
-python3 - "$APP/Contents/Info.plist" "$APP_VERSION" "$APP_BUILD" <<'PY'
-import plistlib, sys
-info = {
-    'CFBundleExecutable': 'LocalFileSorter',
-    'CFBundleIdentifier': 'local.ompatnaik.LocalFileSorter',
-    'CFBundleName': 'Local File Sorter',
-    'CFBundleDisplayName': 'Local File Sorter',
-    'CFBundlePackageType': 'APPL',
-    'CFBundleShortVersionString': sys.argv[2],
-    'CFBundleVersion': sys.argv[3],
-    'LSMinimumSystemVersion': '26.0',
-    'NSHighResolutionCapable': True,
-    'NSDownloadsFolderUsageDescription': 'Watch your selected Downloads folder and sort finished downloads after you enable sorting.',
-    'NSDocumentsFolderUsageDescription': 'Store sorted files in your selected destination and maintain undo history.',
-}
-with open(sys.argv[1], 'wb') as f:
-    plistlib.dump(info, f)
-PY
+cat > "$APP/Contents/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleExecutable</key><string>LocalFileSorter</string>
+<key>CFBundleIdentifier</key><string>local.ompatnaik.LocalFileSorter</string>
+<key>CFBundleName</key><string>Local File Sorter</string>
+<key>CFBundleDisplayName</key><string>Local File Sorter</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+<key>CFBundleShortVersionString</key><string>$APP_VERSION</string>
+<key>CFBundleVersion</key><string>$APP_BUILD</string>
+<key>LSMinimumSystemVersion</key><string>26.0</string>
+<key>NSHighResolutionCapable</key><true/>
+<key>NSDownloadsFolderUsageDescription</key><string>Watch your selected Downloads folder and sort finished downloads after you enable sorting.</string>
+<key>NSDocumentsFolderUsageDescription</key><string>Store sorted files in your selected destination and maintain undo history.</string>
+</dict></plist>
+PLIST
+/usr/bin/plutil -lint "$APP/Contents/Info.plist"
 if [[ "$SIGNED" == 1 ]]; then
   codesign --force --options runtime --timestamp --sign "$SIGNING_IDENTITY" "$APP"
   codesign --display --verbose=4 "$APP" 2>&1 | /usr/bin/grep -q '^Authority=Developer ID Application:'

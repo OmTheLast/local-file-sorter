@@ -1,71 +1,69 @@
-# Homebrew release
+# Free Homebrew source release
 
-Local File Sorter is packaged as a Homebrew **cask** containing one native `.app`, for Apple Silicon and macOS 26 or later. End users need no compiler, Python, model API key or Homebrew formula dependencies. Classification stays on their Mac.
+Local File Sorter is distributed as a **Homebrew formula that compiles on the user's Mac**. No Apple Developer membership, Developer ID certificate, notarization service, cloud AI or paid dependency is required. This is a third-party tap, not an official Homebrew/core package.
 
-The first binary release is **0.3.0**. It is currently a local candidate: this machine has no Developer ID Application signing identity. Its ad-hoc signature verifies file integrity but Gatekeeper rejects it. Do not publish this candidate as a working public binary download, add it to a live tap, or recommend removing quarantine. No Apple Developer enrollment or other paid service has been purchased.
+## Installation
 
-## Build a candidate
+Requirements: Apple Silicon, macOS 26 or later, Homebrew, and Apple's free Command Line Tools with a macOS 26+ SDK. Full Xcode is not required. If the tools are missing, run `xcode-select --install`; if the SDK is too old, update Command Line Tools through Software Update.
 
-Build prerequisites: an Apple Silicon Mac, Apple Command Line Tools or Xcode with a macOS 26+ SDK, Swift 6+, Python 3, and Homebrew for the packaging test. The scripts use Apple/system tools and the existing Homebrew installation.
-
-```sh
-./scripts/package-release.sh --candidate
-./scripts/verify-release.py dist/releases/0.3.0-candidate
-./scripts/test-package.sh dist/releases/0.3.0-candidate
-```
-
-Each output directory is created exclusively. Existing output directories are never reused. Set `RELEASE_OUTPUT_DIR` to a new directory to repeat a build while preserving an earlier candidate.
-
-The output contains the app, `LocalFileSorter-0.3.0-arm64.zip`, `SHA256SUMS`, a generated `local-file-sorter.rb`, build provenance and safety-test output. Only the main app is in the ZIP; sample files, user settings, source folders, personal history and signing credentials are not included. A dirty candidate records that fact in provenance. For distribution, build from a clean committed revision.
-
-`test-package.sh` installs the real archive using an isolated temporary cask and application directory, then uninstalls it. The temporary cask changes the token and URL and omits the quit hook so it cannot stop another installed instance. It verifies the checksum, metadata, architecture, signature integrity and preservation of the existing settings/history/login configuration. It does not launch the app, test the production quit hook or prove Gatekeeper acceptance. Downloads may continue sorting during this test; pause the app if that causes its state-preservation assertion to fail.
-
-## Sign and notarize
-
-Use an existing **Developer ID Application** signing identity and a `notarytool` profile already stored in Keychain. Do not put passwords, private keys, API keys or certificates in this repository. Check available identities with `security find-identity -v -p codesigning`. Follow [Apple's notarization guide](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution) to configure the Keychain profile outside this project.
-
-```sh
-SIGNING_IDENTITY='Developer ID Application: YOUR EXISTING IDENTITY' \
-NOTARY_KEYCHAIN_PROFILE='YOUR EXISTING KEYCHAIN PROFILE' \
-./scripts/package-release.sh --notarized
-
-./scripts/verify-release.py dist/releases/0.3.0-notarized --notarized
-./scripts/test-package.sh dist/releases/0.3.0-notarized
-```
-
-The notarized path requires a clean Git working tree, runs the safety suite, signs with hardened runtime and a secure timestamp, submits the binary to Apple, requires an Accepted response, staples and validates the ticket, assesses Gatekeeper, then creates the final ZIP and its checksum. Only the release binary is submitted to Apple, not documents or file contents being sorted. This path has not been exercised on this machine because no signing identity is installed.
-
-The ZIP must be created **after** stapling. Rebuilding/signing/stapling changes the bytes and therefore requires regenerating the cask checksum. Never reuse a checksum from the local candidate.
-
-## Publish after signing is ready
-
-Review the exact source revision, release notes and signed artifacts before publishing. No workflow auto-publishes on push. Keep `VERSION` and `BUILD_NUMBER` increasing for subsequent releases. Keep published artifacts immutable: use a new version to replace a bad release.
-
-1. Run the notarized verification and packaging tests above. Test opening the downloaded, quarantined app on a fresh macOS user account; enable sorting with sample downloads, verify pause, undo, window-closed operation and login. That clean-account test is still outstanding.
-2. Create/update a GitHub **draft prerelease** for `v0.3.0`, targeting exactly the commit recorded in `provenance.json`. Upload the final ZIP, `SHA256SUMS`, generated cask, provenance and safety results. Use `docs/RELEASE_NOTES_0.3.0.md` as the body, replacing its candidate-status paragraph with the verified signing status. When updating the draft candidate, replace all assets as a set; never mix its checksum with the signed ZIP.
-3. Publish the prerelease only after the signed build passes. Download the now-public archive and check its SHA-256 against the generated cask.
-4. Make the existing public repository a tap by copying the generated **notarized** cask into `Casks/local-file-sorter.rb`, running `brew style` and `brew audit --cask --online` on that cask in a local tap, then committing/pushing it. The live `Casks/` entry is deliberately absent while its download is an unpublished, unnotarized draft.
-
-Once those steps are complete, the supported installation commands will be:
+After the source release is published:
 
 ```sh
 brew tap omthelast/local-file-sorter https://github.com/OmTheLast/local-file-sorter
-brew install --cask omthelast/local-file-sorter/local-file-sorter
-open -a 'Local File Sorter'
+brew install omthelast/local-file-sorter/local-file-sorter
+local-file-sorter
 ```
 
-If Homebrew requests trust, trust just `omthelast/local-file-sorter/local-file-sorter` as a cask. This is a third-party tap, not a submission to the official Homebrew repository. The command is intentionally **not advertised as available yet**.
+The formula verifies the source archive's SHA-256 and compiles the native app locally. No precompiled app is downloaded. Homebrew's build sandbox remains enabled; only Swift's nested manifest/macro sandboxes are disabled to avoid unsupported sandbox nesting. The locally generated app receives an ad-hoc integrity signature, which needs no account or certificate. No Gatekeeper setting or quarantine attribute is changed. It is not an Apple-notarized binary.
 
-Updates: `brew update` then `brew upgrade --cask omthelast/local-file-sorter/local-file-sorter`. The cask quits the running app when upgrading; reopen it afterward. Saved automation preferences and undo history survive. Removal: `brew uninstall --cask omthelast/local-file-sorter/local-file-sorter`. There is no `zap` stanza; source files, sorted files and application support data are preserved. Remove any manually added Login Item separately.
+There are no third-party runtime dependencies. Homebrew may need to install/update its own runtime as part of its normal operation. Building uses the Apple Swift compiler and SDK. The source release archive contains tracked project files only, with no app bundle, user settings, Downloads, undo history, credentials, or build cache.
 
-## First launch and migration
+Fresh installs start paused. Open the app, choose folders/categories if desired and click **Resume automatic sorting** once. Completed downloads then sort automatically, including uncertain files going to Needs Review. Existing files stay excluded. Close the window to keep sorting. Pause and Undo are available in the app. Upgrades preserve the saved enabled/paused choice.
 
-Fresh installs start paused. Choose folders/categories in Settings, optionally preview old files, then enable automatic sorting from Downloads. Further finished downloads sort without per-file approval; unclear files go directly into Needs Review. Existing saved enabled/paused settings are preserved during upgrades. Installing a cask does not launch sorting or silently add login startup. To start at login, add the installed app under System Settings → General → Login Items. It keeps running when its window is closed.
+Commands:
 
-For this Mac's earlier script installation in `~/Applications`, pause and quit before switching to the Homebrew copy. Unload the old `local.ompatnaik.LocalFileSorter.login` LaunchAgent and move that named plist out of `~/Library/LaunchAgents`; move the old app out of `~/Applications`. Keep `~/Library/Application Support/LocalFileSorter` and all source/destination files. Install/open the Homebrew copy and add that copy to Login Items if desired. Do not run both copies concurrently; the history lock permits one sorter only. No migration has been performed automatically on this Mac.
+```sh
+local-file-sorter --version       # Show installed version
+local-file-sorter --path          # App location (stable across upgrades)
+local-file-sorter --demo          # Separate temporary sample session
+local-file-sorter --background    # Open without the main window
+```
 
-## Current verification limits
+For login startup, add the path from `local-file-sorter --path` to System Settings → General → Login Items. The formula does not enable sorting, start the app or install a Login Item automatically.
 
-Twenty safety suites passed on macOS 26.2 with Swift 6.3.2 and the macOS 26.5 SDK, including first-install opt-in and preserving enabled state during an upgrade. The local Homebrew install/uninstall test passed. Signature integrity passed; Gatekeeper rejection of the ad-hoc candidate was confirmed. A real signed/notarized download, public release URL, clean-account launch, actual Homebrew version upgrade, logout/login, and Intel execution were not tested. Intel is explicitly unsupported by this package.
+## Updates and removal
 
-References: [Homebrew cask format](https://docs.brew.sh/Cask-Cookbook), [third-party taps](https://docs.brew.sh/How-to-Create-and-Maintain-a-Tap), [official cask Gatekeeper requirements](https://docs.brew.sh/Acceptable-Casks).
+Quit the app before upgrading or uninstalling. Then:
+
+```sh
+brew update
+brew upgrade omthelast/local-file-sorter/local-file-sorter
+local-file-sorter
+
+# To remove the installed package:
+brew uninstall omthelast/local-file-sorter/local-file-sorter
+```
+
+Uninstall removes only Homebrew's app and launcher. It preserves sorted files and `~/Library/Application Support/LocalFileSorter` (settings, exclusions and undo history). Remove a manually added Login Item separately. Existing files are never moved as part of installation, upgrade or removal.
+
+This Mac's earlier copy in `~/Applications` and its login LaunchAgent are separate. To migrate, pause/quit that copy, unload the `local.ompatnaik.LocalFileSorter.login` LaunchAgent, move its plist out of `~/Library/LaunchAgents`, and move the old app out of `~/Applications`. Keep application support/history and all source/destination files. Then launch the Homebrew copy. Do not run both copies against the same history; a process lock allows only one. Migration is not performed by the formula.
+
+## Prepare the next release
+
+1. Update `VERSION` and `BUILD_NUMBER`, finish changes, run `swift run SorterTests`, and commit all release inputs.
+2. Run `./scripts/package-source-release.sh`. It creates `dist/releases/VERSION-source` exclusively; set `RELEASE_OUTPUT_DIR` to a fresh directory to repeat without overwriting old artifacts.
+3. The output includes `LocalFileSorter-VERSION-source.tar.gz`, `SHA256SUMS`, the generated formula and source provenance. Test the formula's local-source equivalent with a clean Homebrew build, `brew test`, and a native `--demo` launch. Run `brew style` and audit it in a temporary tap. Check removal preserves state.
+4. Tag the exact commit from `provenance.json`, push it, and upload the source archive, checksum, provenance and verification report to its GitHub release. Verify remote asset digests. Do not attach the old unnotarized binary candidate.
+5. Copy the generated formula into `Formula/local-file-sorter.rb`, commit/push, then test a download/build from the published URL. The app source tag precedes the generated formula commit to avoid a checksum self-reference.
+
+Use a new version for corrections to published artifacts. No workflow auto-publishes or creates bottles. There is intentionally no bottle stanza: users build on their own Macs.
+
+## Binary candidate retained as historical work
+
+The earlier 0.3.0 cask draft required notarization for the intended downloaded-binary experience. That is **not a blocker for this source-based release**. Local candidate artifacts and optional signing scripts remain for reference; the Homebrew installation above does not use them or call Apple's notarization service.
+
+## Verification limits
+
+The core safety suite covers 20 cases including first-install opt-in, persisted automation, file stability, move/undo conflicts, extraction, OCR and recovery. A source build, app launch and package lifecycle are tested on this M4 Max/macOS 26.2 Mac with Command Line Tools, Swift 6.3.2 and SDK 26.5. Fresh-account installation, a real version-to-version upgrade and logout/login remain untested. Intel is unsupported. Classifier accuracy and document-format limits remain described in the README.
+
+References: [Homebrew formula development](https://docs.brew.sh/Formula-Cookbook), [third-party taps](https://docs.brew.sh/How-to-Create-and-Maintain-a-Tap), [Apple Command Line Tools](https://developer.apple.com/documentation/xcode/installing-the-command-line-tools).
