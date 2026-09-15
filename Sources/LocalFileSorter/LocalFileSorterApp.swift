@@ -3,17 +3,21 @@ import AppKit
 import SorterCore
 
 @main struct LocalFileSorterApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model = AppModel()
     var body: some Scene {
-        WindowGroup("Local File Sorter") {
+        Window("Local File Sorter", id: "main") {
             ContentView(model: model).frame(minWidth: 980, minHeight: 680)
         }
         .defaultSize(width: 1140, height: 780)
         .commands { CommandGroup(replacing: .newItem) {} }
+        MenuBarExtra(model.demo ? "File Sorter Samples" : "File Sorter", systemImage: model.automation ? "tray.and.arrow.down.fill" : "tray") {
+            SorterMenu(model: model)
+        }
     }
 }
 private enum Page: String, CaseIterable, Identifiable {
-    case review = "Review files", history = "History", automation = "Automatic sorting", settings = "Settings"
+    case automation = "Downloads", history = "History", review = "Existing files", settings = "Settings"
     var id: String { rawValue }
     var icon: String {
         switch self { case .review: "tray.full"; case .history: "clock.arrow.circlepath"; case .automation: "bolt"; case .settings: "gearshape" }
@@ -21,11 +25,9 @@ private enum Page: String, CaseIterable, Identifiable {
 }
 struct ContentView: View {
     @ObservedObject var model: AppModel
-    @State private var page: Page = .review
+    @State private var page: Page = .automation
     @State private var categories = false
     @State private var confirmSort = false
-    @State private var confirmAutomation = false
-    @State private var reviewedAutomation = false
     @State private var reviewOnly = false
     private var locked: Bool { model.busy || model.automation }
     private var reviewCount: Int { model.proposals.filter { $0.categoryID == "review" }.count }
@@ -66,25 +68,17 @@ struct ContentView: View {
             }.padding(26)
         }
         .background(Color(nsColor: .windowBackgroundColor))
-        .task { if model.demo && !model.hasPreview && !model.busy { model.scan() } }
-        .onChange(of: model.hasPreview) { _, _ in reviewedAutomation = false }
         .sheet(isPresented: $categories) { CategoriesView(settings: model.settings) { model.saveSettings($0) } }
         .sheet(isPresented: $confirmSort) { sortConfirmation }
-        .alert("Turn on automatic sorting?", isPresented: $confirmAutomation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Turn on") { model.approvePreview(); model.enableAutomation() }
-        } message: {
-            Text("New arrivals in \(model.settings.source.lastPathComponent) will be sorted while this app is open. Existing files and Needs Review items stay for you to review. \(model.allowAIAutomation ? "Document suggestions may also move automatically." : "Document suggestions wait for your approval.")")
-        }
         .alert("Needs attention", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) {
             Button("OK") { model.error = nil }
         } message: { Text(model.error ?? "") }
     }
     private var subtitle: String {
         switch page {
-        case .review: return "Choose which files to move and where they belong."
+        case .review: return "Optionally sort files that were already in your Downloads."
         case .history: return "See completed moves and restore files."
-        case .automation: return "Choose how to handle new files after you review a preview."
+        case .automation: return "Finished downloads go straight into the right folder."
         case .settings: return "Choose your folders and organize your categories."
         }
     }
@@ -260,32 +254,35 @@ struct ContentView: View {
         }
     }
     private var automation: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                Label(model.automation ? "Automatic sorting is on" : "Automatic sorting is off", systemImage: model.automation ? "bolt.circle.fill" : "pause.circle")
-                    .font(.title2.weight(.semibold)).foregroundStyle(model.automation ? Color.green : .primary)
-                Text("New files in \(model.settings.source.lastPathComponent) can be sorted while this app is open. Files already there remain yours to review.").foregroundStyle(.secondary)
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("What should move automatically?").font(.headline)
-                    Picker("Automatic sorting scope", selection: $model.allowAIAutomation) {
-                        Text("Images, installers and archives only").tag(false)
-                        Text("Also include AI document suggestions").tag(true)
-                    }.pickerStyle(.radioGroup).disabled(locked || !model.settings.useAI)
-                    Text("Needs Review files always wait for you. Document suggestions use Apple Intelligence on this Mac.").font(.callout).foregroundStyle(.secondary)
-                    if !model.settings.useAI { Text("Turn on Apple Intelligence in Settings to include document suggestions.").font(.caption).foregroundStyle(.secondary) }
-                }.padding(20).frame(maxWidth: .infinity, alignment: .leading).background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
-                if model.automation {
-                    Button("Pause automatic sorting", systemImage: "pause") { model.pause() }.controlSize(.large)
-                } else if !model.hasPreview {
-                    Label("Start by scanning and reviewing your files.", systemImage: "1.circle").font(.headline)
-                    Button("Go to Review files") { page = .review }
-                } else {
-                    Toggle("I have reviewed the current preview", isOn: $reviewedAutomation).disabled(model.busy)
-                    Button("Turn on automatic sorting…", systemImage: "bolt") { confirmAutomation = true }
-                        .buttonStyle(.borderedProminent).controlSize(.large).disabled(!reviewedAutomation || model.busy)
+        VStack(alignment: .leading, spacing: 24) {
+            folderRoute
+            HStack(alignment: .top, spacing: 18) {
+                Image(systemName: model.automation ? "checkmark.circle.fill" : "pause.circle.fill")
+                    .font(.system(size: 44)).foregroundStyle(model.automation ? Color.green : .secondary)
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(model.automation ? "Your downloads sort themselves" : "Automatic sorting is paused")
+                        .font(.title2.weight(.semibold))
+                    Text(model.automation ? "Download a file as usual. Once it finishes, it moves into Sorted Files automatically. No scan or approval needed." : "Resume to automatically sort new downloads. Files that were present at first setup stay untouched.")
+                        .foregroundStyle(.secondary)
+                    Button(model.automation ? "Pause sorting" : "Resume automatic sorting") {
+                        if model.automation { model.pause() } else { model.enableAutomation() }
+                    }.controlSize(.large).disabled(!model.automation && (model.busy || !model.canOperate))
                 }
-                Text("Downloads must finish before they move. You can pause anytime, and automatic sorting is always off when you reopen the app.").font(.callout).foregroundStyle(.secondary)
-            }.frame(maxWidth: 650, alignment: .leading)
+            }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
+                .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 12))
+            VStack(alignment: .leading, spacing: 14) {
+                Label("Documents are classified on this Mac with Apple Intelligence.", systemImage: "cpu")
+                Label("Uncertain or unreadable files go into Needs Review automatically.", systemImage: "questionmark.folder")
+                Label("Original filenames stay the same. Undo is available in History.", systemImage: "arrow.uturn.backward")
+                Label("Close this window to keep sorting in the menu bar.", systemImage: "menubar.rectangle")
+            }.font(.callout).foregroundStyle(.secondary)
+            HStack {
+                Button("Open Sorted Files", systemImage: "folder") { model.reveal(model.settings.destination) }
+                Button("View history") { page = .history }
+            }
+            Text(model.demo ? "This sample app watches only its temporary folder. Your actual Downloads are untouched." : "Pause is remembered across restarts. Quit stops sorting until the app is opened again or you log in.")
+                .font(.caption).foregroundStyle(.secondary)
+            Spacer(minLength: 0)
         }
     }
     private var settings: some View {
@@ -309,7 +306,7 @@ struct ContentView: View {
                 Divider()
                 VStack(alignment: .leading, spacing: 10) {
                     Toggle("Use Apple Intelligence for documents", isOn: Binding(get: { model.settings.useAI }, set: { var s = model.settings; s.useAI = $0; model.saveSettings(s) })).disabled(locked)
-                    Text("Reads document text on this Mac to suggest a category. You can still sort by file type and choose folders manually when it is off.").font(.callout).foregroundStyle(.secondary)
+                    Text("Classifies documents on this Mac. When AI is off or unavailable, documents go to Needs Review; file-type rules still work.").font(.callout).foregroundStyle(.secondary)
                     Label(model.modelStatus, systemImage: "cpu").font(.caption).foregroundStyle(.secondary)
                 }
             }.frame(maxWidth: 720, alignment: .leading)

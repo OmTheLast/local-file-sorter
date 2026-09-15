@@ -231,4 +231,52 @@ final class SafetyTests {
         XCTAssertThrowsError(try LocalProcess.run("/usr/bin/yes", ["bounded"], limit: 1000))
     }
 
+    func testPersistentArrivalsAndAutomaticFallback() async throws {
+        let (_, settings, journal, engine) = try fixture()
+        let original = settings.source.appendingPathComponent("existing.png")
+        try write(original, "original file")
+        let state = try ArrivalState.load(journal: journal, source: settings.source, defaultEnabled: true)
+        XCTAssertTrue(state.enabled)
+        // Download arrives after setup, even if the app is restarted before processing.
+        let newImage = settings.source.appendingPathComponent("arrival.png")
+        let newDocument = settings.source.appendingPathComponent("document.txt")
+        let partial = settings.source.appendingPathComponent("still.crdownload")
+        try write(newImage); try write(newDocument, "These project meeting notes need content classification. AI is disabled for this test.")
+        try write(partial)
+        let reloaded = try ArrivalState.load(journal: journal, source: settings.source, defaultEnabled: true)
+        XCTAssertTrue(try reloaded.excludedPaths().contains(original.path))
+        XCTAssertFalse(try reloaded.excludedPaths().contains(newImage.path))
+        let first = try await engine.sortNewArrivals(settings: settings, state: reloaded)
+        XCTAssertTrue(first.moved.isEmpty)
+        try await Task.sleep(for: .seconds(5.1))
+        let second = try await engine.sortNewArrivals(settings: settings, state: reloaded)
+        XCTAssertEqual(second.moved.count, 2)
+        XCTAssertTrue(FileSafety.exists(settings.destination.appendingPathComponent("Images/arrival.png")))
+        XCTAssertTrue(FileSafety.exists(settings.destination.appendingPathComponent("Needs Review/document.txt")))
+        XCTAssertTrue(FileSafety.exists(original)); XCTAssertTrue(FileSafety.exists(partial))
+        var paused = reloaded; paused.enabled = false; try paused.save(journal: journal)
+        let afterPause = settings.source.appendingPathComponent("paused.png"); try write(afterPause)
+        let persisted = try ArrivalState.load(journal: journal, source: settings.source, defaultEnabled: true)
+        XCTAssertFalse(persisted.enabled)
+        let stopped = try await engine.sortNewArrivals(settings: settings, state: persisted)
+        XCTAssertTrue(stopped.moved.isEmpty); XCTAssertTrue(FileSafety.exists(afterPause))
+        let record = try XCTUnwrap(second.moved.first { $0.original == newImage })
+        let undone = try await engine.undo(record.id)
+        paused.ignore(try XCTUnwrap(undone.undoDestination)); try paused.save(journal: journal)
+        let afterUndo = try ArrivalState.load(journal: journal, source: settings.source, defaultEnabled: true)
+        XCTAssertTrue(try afterUndo.excludedPaths().contains(newImage.path))
+    }
+    func testOriginalEditsAndNewSameName() throws {
+        let (_, settings, journal, _) = try fixture()
+        let file = settings.source.appendingPathComponent("same.png"); try write(file)
+        let state = try ArrivalState.load(journal: journal, source: settings.source, defaultEnabled: true)
+        let handle = try FileHandle(forWritingTo: file); try handle.write(contentsOf: Data("edited".utf8)); try handle.close()
+        XCTAssertTrue(try state.excludedPaths().contains(file.path))
+        try FileManager.default.moveItem(at: file, to: settings.source.appendingPathComponent("old-copy.png"))
+        try write(file, "new download with the same name")
+        XCTAssertFalse(try state.excludedPaths().contains(file.path))
+        try "corrupt".write(to: journal.folder.appendingPathComponent("automation.json"), atomically: true, encoding: .utf8)
+        XCTAssertThrowsError(try ArrivalState.load(journal: journal, source: settings.source, defaultEnabled: true))
+    }
+
 }

@@ -1,0 +1,20 @@
+PASS approval and destination collision
+PASS undo with original collision
+PASS undo rejects modified files
+PASS stale preview
+PASS download stability and writer detection
+PASS hidden/temp/link/alias/bundle/destination skips
+PASS configuration traversal and name validation
+PASS write-ahead crash recovery and process lock
+PASS interrupted move and undo recovery
+PASS corrupt history fails closed
+PASS rules, AI-disabled fallback and injection
+PASS read-only preview and automation baseline
+PASS DOCX/XLSX/PPTX/RTF local extraction
+PASS scanned PDF Vision OCR
+PASS destination symlink and kernel no-replace
+PASS native PDF / DOC / ODT local extraction
+PASS extraction limits and subprocess timeout
+PASS persistent arrivals, automatic fallback, pause and undo
+PASS original edits, same-name new download and corrupt automation state
+Safety suites: 19, assertion failures: 0

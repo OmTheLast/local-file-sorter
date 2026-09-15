@@ -1,0 +1,4 @@
+Sample app: Resume started sorting without any preview.
+With window closed: open writer held for 22 seconds stayed in source; image, unknown type, and invoice were sorted after completion without approval; original files and incomplete download stayed untouched.
+Installed app: login LaunchAgent started it; automatic mode active for real Downloads without preview. A new synthetic .crdownload remained until renamed, then moved to Needs Review with the window closed. All baseline existing regular files remained present.
+Installed app: Undo restored the synthetic download. Pause survived app quit/relaunch. The test file was relocated to temporary storage; automation resumed for new Downloads. No personal file was moved.

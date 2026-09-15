@@ -12,7 +12,6 @@ import SorterCore
     @Published var busy = false
     @Published var scanning = false
     @Published var automation = false
-    @Published var allowAIAutomation = false
     @Published var previewApproved = false
     @Published var hasPreview = false
     @Published var error: String?
@@ -21,7 +20,8 @@ import SorterCore
     private var engine: SorterEngine?
     private var operation: Task<Void, Never>?
     private var monitor: Task<Void, Never>?
-    private var excluded = Set<String>()
+    private var arrivals: ArrivalState?
+    private var failedArrivals = Set<String>()
     var selectedCount: Int { proposals.filter(\.approved).count }
     var canOperate: Bool { engine != nil }
 
@@ -59,7 +59,10 @@ import SorterCore
             if !isDemo, let saved = try journal.loadSettings() { settings = saved }
             try journal.recover(); history = try journal.records()
             self.journal = journal; engine = SorterEngine(journal: journal)
-            if isDemo { status = "Sample preview only. These are temporary fixtures; your Downloads are untouched." }
+            arrivals = try ArrivalState.load(journal: journal, source: settings.source, defaultEnabled: !isDemo)
+            if isDemo { status = "Sample files only. Your Downloads are untouched." }
+            if arrivals?.enabled == true { enableAutomation() }
+            else { status = "Automatic sorting is paused. Resume to sort new downloads." }
         } catch { self.error = "Startup needs attention: \(error.localizedDescription). File operations are disabled." }
     }
     func saveSettings(_ new: SorterCore.Settings) {
@@ -71,7 +74,9 @@ import SorterCore
         do {
             try new.validate(); try journal?.saveSettings(new)
             settings = new; proposals = []; hasPreview = false; previewApproved = false; skipped = []
-            status = "Folders or categories changed. Scan and approve a fresh preview."
+            if let journal { arrivals = try ArrivalState.load(journal: journal, source: new.source, defaultEnabled: false) }
+            failedArrivals = []
+            status = "Settings saved. Resume automatic sorting when ready."
         } catch { self.error = error.localizedDescription }
     }
     func selectFolder(source: Bool) {
@@ -126,48 +131,60 @@ import SorterCore
         }
     }
     func enableAutomation() {
-        guard previewApproved, !busy, let engine else { return }
+        guard !busy, !automation, let engine, let journal else { return }
         do {
             try settings.validate()
-            // Existing files are excluded, even when absent from the preview due to settling.
-            excluded = Set(try FileManager.default.contentsOfDirectory(at: settings.source, includingPropertiesForKeys: nil).map(\.path))
+            if arrivals == nil { arrivals = try ArrivalState.load(journal: journal, source: settings.source, defaultEnabled: true) }
+            arrivals?.enabled = true
+            try arrivals?.save(journal: journal)
         } catch { self.error = error.localizedDescription; return }
+        failedArrivals = []
         automation = true
-        status = "Watching new arrivals while the app is open. Existing files remain excluded."
+        status = "Watching \(settings.source.lastPathComponent). Finished downloads sort automatically."
         monitor = Task {
             while !Task.isCancelled && automation {
                 do {
-                    try await Task.sleep(for: .seconds(5))
+                    try await Task.sleep(for: .seconds(3))
                     guard automation, !busy else { continue }
                     busy = true
-                    let result = try await engine.scan(settings: settings, excluding: excluded)
+                    guard let arrivals else { throw SorterError.message("Automatic sorting state is unavailable.") }
+                    let result = try await engine.sortNewArrivals(settings: settings, state: arrivals, failedPaths: failedArrivals)
+                    refreshHistory()
                     guard !Task.isCancelled, automation else { busy = false; return }
                     skipped = result.skipped
-                    for var proposal in result.proposals {
-                        guard automation, !Task.isCancelled else { break }
-                        if proposal.categoryID != "review" && (proposal.method == "Rule" || allowAIAutomation && proposal.method == "On-device AI") {
-                            proposal.approved = true
-                            do { _ = try await engine.move(proposal, settings: settings) }
-                            catch { proposal.approved = false; proposal.reason += " · Move failed: \(error.localizedDescription)"; proposals.append(proposal) }
-                        } else { proposals.append(proposal) }
-                        excluded.insert(proposal.source.path)
+                    for record in result.moved { proposals.removeAll { $0.source == record.original } }
+                    for proposal in result.failed {
+                        proposals.removeAll { $0.source == proposal.source }
+                        proposals.append(proposal)
+                        failedArrivals.insert(proposal.source.path)
                     }
-                    refreshHistory(); busy = false
-                    status = "Automation active · \(result.waiting) settling · \(proposals.count) awaiting review."
-                } catch is CancellationError { busy = false; return }
-                catch { busy = false; pause(); self.error = "Automation paused: \(error.localizedDescription)" }
+                    busy = false
+                    if automation {
+                        status = result.waiting > 0 ? "Waiting for \(result.waiting) downloads to finish…" : "Watching for downloads. \(result.moved.isEmpty ? "Files sort automatically." : "Sorted \(result.moved.count) just now.")"
+                        if !failedArrivals.isEmpty { status += " \(failedArrivals.count) couldn’t move; see Existing files or pause and resume to retry." }
+                    }
+                    modelStatus = Classifier.modelStatus
+                } catch is CancellationError { refreshHistory(); busy = false; return }
+                catch { busy = false; pause(); self.error = "Automatic sorting paused: \(error.localizedDescription)" }
             }
         }
     }
     func pause() {
-        if automation { status = "Automation paused. Pending files remain available for review." }
         automation = false; monitor?.cancel(); monitor = nil
+        arrivals?.enabled = false
+        do { if let journal { try arrivals?.save(journal: journal) } }
+        catch { self.error = "Could not save pause state. Quit the app to stop it: \(error.localizedDescription)" }
+        status = "Automatic sorting is paused. New files stay in Downloads until you resume."
     }
     func undo(_ record: MoveRecord) {
         guard !busy, let engine else { return }; pause(); busy = true
         operation = Task {
             do {
                 let restored = try await engine.undo(record.id)
+                if let url = restored.undoDestination, let journal {
+                    arrivals?.ignore(url)
+                    try arrivals?.save(journal: journal)
+                }
                 status = restored.note ?? "File restored. See History for its location."
                 proposals = []; hasPreview = false; previewApproved = false
             } catch { self.error = error.localizedDescription }

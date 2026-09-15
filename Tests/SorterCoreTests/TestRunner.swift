@@ -41,7 +41,9 @@ func XCTUnwrap<T>(_ value: T?) throws -> T { guard let value else { throw NSErro
             ("scanned PDF Vision OCR", { try suite.testScannedPDFUsesVisionOCR() }),
             ("destination symlink and kernel no-replace", { try await suite.testDestinationSymlinkAndKernelNoReplace() }),
             ("native PDF / DOC / ODT local extraction", { try suite.testNativePDFAndLegacyOfficeExtraction() }),
-            ("extraction limits and subprocess timeout", { try await suite.testExtractionLimitsAndTimeout() })
+            ("extraction limits and subprocess timeout", { try await suite.testExtractionLimitsAndTimeout() }),
+            ("persistent arrivals, automatic fallback, pause and undo", { try await suite.testPersistentArrivalsAndAutomaticFallback() }),
+            ("original edits, same-name new download and corrupt automation state", { try suite.testOriginalEditsAndNewSameName() })
         ]
         for (name, test) in tests {
             let before = failures.count

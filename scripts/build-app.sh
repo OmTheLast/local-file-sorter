@@ -15,11 +15,11 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <key>CFBundleName</key><string>Local File Sorter</string>
 <key>CFBundleDisplayName</key><string>Local File Sorter</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.1.0</string>
-<key>CFBundleVersion</key><string>1</string>
+<key>CFBundleShortVersionString</key><string>0.2.0</string>
+<key>CFBundleVersion</key><string>2</string>
 <key>LSMinimumSystemVersion</key><string>26.0</string>
 <key>NSHighResolutionCapable</key><true/>
-<key>NSDownloadsFolderUsageDescription</key><string>Preview files in your selected source folder and sort only after your approval.</string>
+<key>NSDownloadsFolderUsageDescription</key><string>Watch your selected Downloads folder and automatically sort finished downloads.</string>
 <key>NSDocumentsFolderUsageDescription</key><string>Store sorted files in your selected destination and maintain undo history.</string>
 </dict></plist>
 PLIST
