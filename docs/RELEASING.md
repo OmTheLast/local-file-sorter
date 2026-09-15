@@ -6,7 +6,7 @@ Local File Sorter is distributed as a **Homebrew formula that compiles on the us
 
 Requirements: Apple Silicon, macOS 26 or later, Homebrew, and Apple's free Command Line Tools with a macOS 26+ SDK. Full Xcode is not required. If the tools are missing, run `xcode-select --install`; if the SDK is too old, update Command Line Tools through Software Update.
 
-After the source release is published:
+Install the published source release:
 
 ```sh
 brew tap omthelast/local-file-sorter https://github.com/OmTheLast/local-file-sorter
@@ -61,6 +61,8 @@ Use a new version for corrections to published artifacts. No workflow auto-publi
 ## Binary candidate retained as historical work
 
 The earlier 0.3.0 cask draft required notarization for the intended downloaded-binary experience. That is **not a blocker for this source-based release**. Local candidate artifacts and optional signing scripts remain for reference; the Homebrew installation above does not use them or call Apple's notarization service.
+
+See [the 0.3.0 verification record](RELEASE_VALIDATION_0.3.0.md) for the completed public installation checks.
 
 ## Verification limits
 
