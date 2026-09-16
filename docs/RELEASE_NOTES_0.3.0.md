@@ -1,8 +1,16 @@
-# Local File Sorter 0.3.0 — free Homebrew source release
+# Local File Sorter 0.3.0
 
-Install a small native Mac utility that sorts finished downloads using file-type rules and Apple's on-device Foundation Models. The Homebrew formula builds the app on your Mac: **no paid Apple Developer membership or signing certificate is needed**.
+Keep your Downloads organized automatically with a native Mac app. Local File Sorter combines file-type rules with on-device Apple Intelligence to sort documents, images, installers, and archives into customizable folders.
 
-Requirements: Apple Silicon, macOS 26+, Homebrew and Apple's free Command Line Tools with a macOS 26+ SDK. Full Xcode is not required.
+- Automatically sorts new files after downloads finish.
+- Reads PDFs, text, and common Office documents, including local OCR for scanned PDFs.
+- Preserves filenames, avoids overwriting files, and provides move history with Undo.
+- Runs from the menu bar, with Pause and Resume controls.
+- Keeps processing on your Mac. Uncertain files go to Needs Review.
+
+## Install
+
+Requires Apple Silicon, macOS 26+, Homebrew, and Command Line Tools with the macOS 26 SDK or newer.
 
 ```sh
 brew tap omthelast/local-file-sorter https://github.com/OmTheLast/local-file-sorter
@@ -10,15 +18,8 @@ brew install omthelast/local-file-sorter/local-file-sorter
 local-file-sorter
 ```
 
-- Enable automatic sorting once; subsequent finished downloads need no per-file approval. Fresh installations start paused, and upgrades preserve the saved choice.
-- Configurable folders and categories: Invoices, Work, Research, Images, Installers, Archives and Needs Review.
-- Local document extraction, scanned-PDF OCR and on-device AI. Rules and Needs Review remain usable when Apple Intelligence is unavailable.
-- Preserves filenames, waits for writes to finish, avoids overwriting files and records moves with conflict-safe Undo.
-- Continues sorting when the window closes. Login startup is an explicit user choice in System Settings.
-- No cloud AI, API key, paid runtime dependency or Gatekeeper/quarantine workaround.
+Choose your folders in Settings, then select **Resume automatic sorting**. Existing files stay untouched unless you choose to sort them manually.
 
-The downloadable artifact contains source code, not a precompiled app. Its SHA-256 and source commit accompany it. The formula downloads that source, builds locally and gives the new app an ad-hoc integrity signature. It is not an Apple-notarized binary and does not claim to be one.
+Sorting currently requires source and destination folders on the same filesystem volume. Review History and Needs Review periodically, as document classification can be wrong.
 
-The 20-suite safety tests cover opt-in, file stability, moves/undo, extraction and recovery. See the attached source-release verification report for Homebrew build and launch results. Fresh-account installs, real version-to-version upgrades and logout/login have not been tested.
-
-This remains an early prototype: classification can be wrong, extraction has limits, and cross-volume moves fail safely. Review History and Needs Review periodically. See the README and `docs/RELEASING.md` for details.
+[Setup and usage](https://github.com/OmTheLast/local-file-sorter#readme) · [Supported formats and limits](https://github.com/OmTheLast/local-file-sorter/blob/main/docs/TECHNICAL.md)
