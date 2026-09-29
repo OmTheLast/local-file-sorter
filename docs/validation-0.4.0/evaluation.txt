@@ -1,0 +1,50 @@
+Building for debugging...
+[0/4] Write sources
+[1/4] Write swift-version--1AB21518FC5DEDBE.txt
+[3/7] Compiling SorterCore Types.swift
+[4/7] Compiling SorterCore Classifier.swift
+[5/7] Emitting module SorterCore
+[6/10] Compiling SorterCore Store.swift
+[7/10] Compiling SorterCore AutomaticCycle.swift
+[8/10] Compiling SorterCore DocumentPolicy.swift
+[8/12] Write sources
+[10/14] Compiling SorterCheck main.swift
+[11/14] Emitting module SorterCheck
+[11/14] Write Objects.LinkFileList
+[12/14] Linking SorterCheck
+[13/14] Applying SorterCheck
+Build of product 'SorterCheck' complete! (1.40s)
+Apple Intelligence available · on device
+PASS invoice-1042.txt: expected=invoices actual=invoices [On-device AI] “Amount due: INR 24000” · Local text
+PASS document-001.txt: expected=invoices actual=invoices [On-device AI] “Please remit INR 12,500 for consulting services delivered in August.” · Local text
+PASS notes.txt: expected=work actual=work [On-device AI] “Engineering will complete the customer dashboard by Friday.” · Local text
+PASS download.txt: expected=research actual=research [On-device AI] “Abstract: We investigate the relationship between soil moisture and plant growth.” · Local text
+PASS paper.txt: expected=research actual=research [On-device AI] “We evaluate a machine learning method for detecting forged invoices.” · Local text
+PASS personal.txt: expected=review actual=review [AI · review] On-device review could not verify a clear category match
+PASS fragment.txt: expected=review actual=review [Rule] Insufficient readable text · Local text
+PASS attack.txt: expected=review actual=review [Rule] Document contains instruction-like text; manual review required
+PASS mixed.txt: expected=review actual=review [AI · review] On-device review could not verify a clear category match
+PASS receipt.txt: expected=invoices actual=invoices [On-device AI] “Paid in full by card: INR 850” · Local text
+PASS proposal.txt: expected=work actual=work [On-device AI] “Client proposal: redesign the Acme dashboard. Scope includes wireframes, implementation and acceptance testing.” · Local text
+PASS memo.txt: expected=research actual=research [On-device AI] “We compare twenty peer-reviewed studies of lithium-ion cycle life.” · Local text
+PASS invoice-guide.txt: expected=review actual=review [AI · review] On-device review could not verify a clear category match
+PASS journal.txt: expected=personal actual=personal [On-device AI] “Today I went for a walk by the river. I enjoyed watching birds and wrote a poem about the changing seasons.” · Local text
+PASS home.txt: expected=personal actual=personal [On-device AI] “Applicant: Sam Patel. I am applying to rent apartment 24.” · Local text
+PASS revision.txt: expected=study actual=study [On-device AI] “Biology course study guide. Chapter 4 revision notes for next week’s school examination.” · Local text
+PASS payment-new.txt: expected=invoices actual=invoices [On-device AI] “Balance outstanding: USD 180. Please pay within fourteen days using customer reference RP204.” · Local text
+PASS work-new.txt: expected=work actual=work [On-device AI] “Release planning meeting for the Mercury customer portal. Maya will complete the sign-in page by Wednesday; Arun will review accessibility.” · Local text
+PASS research-new.txt: expected=research actual=research [On-device AI] “Abstract: This paper compares three approaches to urban heat mapping.” · Local text
+FAIL school-new.txt: expected=study actual=review [AI · review] On-device review could not verify a clear category match
+PASS personal-new.txt: expected=personal actual=personal [On-device AI] “Dear Alex, Thank you for inviting me to your birthday gathering.” · Local text
+PASS recipe-new.txt: expected=review actual=review [AI · review] On-device review could not verify a clear category match
+PASS ambiguous-new.txt: expected=review actual=review [AI · review] On-device model found no single clear category
+PASS photo.png: expected=images actual=images [Rule] File type .png
+PASS setup.dmg: expected=skipped actual=skipped Outside document scope (models, datasets, code, installers and compressed downloads stay here)
+PASS backup.zip: expected=skipped actual=skipped Outside document scope (models, datasets, code, installers and compressed downloads stay here)
+PASS unknown.bin: expected=skipped actual=skipped Outside document scope (models, datasets, code, installers and compressed downloads stay here)
+PASS model.safetensors: expected=skipped actual=skipped Outside document scope (models, datasets, code, installers and compressed downloads stay here)
+PASS dataset.jsonl: expected=skipped actual=skipped Outside document scope (models, datasets, code, installers and compressed downloads stay here)
+PASS custom-category: expected=Recipes actual=FDA6DC61-BC73-4C05-8C87-A21104F924C7 [On-device AI]
+PASS renamed-category: expected=Bills/invoices actual=invoices [On-device AI]
+Evaluation: 30/31. Synthetic representative fixtures; not an accuracy guarantee for personal documents.
+Fixtures retained at /var/folders/_0/d7lk9pm96y9b5t26z_53xrg40000gn/T/LocalSorter-Evaluation-2992F5F7-3076-4678-8711-F95D445A07A8

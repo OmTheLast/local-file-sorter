@@ -11,9 +11,10 @@ public struct ArrivalState: Codable, Sendable {
         try FileSafety.validateDirectory(source)
         self.source = source; self.enabled = enabled
         originalFiles = [:]; unreadablePaths = []
-        for url in try FileManager.default.contentsOfDirectory(at: source, includingPropertiesForKeys: nil) {
-            ignore(url)
-        }
+        try excludeExistingFiles()
+    }
+    public mutating func excludeExistingFiles() throws {
+        for url in try FileManager.default.contentsOfDirectory(at: source, includingPropertiesForKeys: nil) { ignore(url) }
     }
     public mutating func ignore(_ url: URL) {
         if let fingerprint = try? Fingerprint(url) { originalFiles[url.path] = fingerprint }

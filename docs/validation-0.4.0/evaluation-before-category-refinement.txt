@@ -1,0 +1,37 @@
+Building for debugging...
+[0/4] Write sources
+[1/4] Write swift-version--1AB21518FC5DEDBE.txt
+[3/6] Compiling SorterCore Classifier.swift
+[4/6] Emitting module SorterCore
+[4/7] Write Objects.LinkFileList
+[5/7] Linking SorterCheck
+[6/7] Applying SorterCheck
+Build of product 'SorterCheck' complete! (0.69s)
+Apple Intelligence available · on device
+PASS invoice-1042.txt: expected=invoices actual=invoices [On-device AI] “Amount due: INR 24000” · Local text
+FAIL document-001.txt: expected=invoices actual=review [AI · review] On-device review could not verify a clear category match
+PASS notes.txt: expected=work actual=work [On-device AI] “Project Atlas weekly meeting
+Engineering will complete the customer dashboard by Friday.” · Local text
+PASS download.txt: expected=research actual=research [On-device AI] “Abstract: We investigate the relationship between soil moisture and plant growth.” · Local text
+PASS paper.txt: expected=research actual=research [On-device AI] “We evaluate a machine learning method for detecting forged invoices.” · Local text
+PASS personal.txt: expected=review actual=review [AI · review] On-device review could not verify a clear category match
+PASS fragment.txt: expected=review actual=review [Rule] Insufficient readable text · Local text
+PASS attack.txt: expected=review actual=review [Rule] Document contains instruction-like text; manual review required
+PASS mixed.txt: expected=review actual=review [AI · review] On-device review could not verify a clear category match
+PASS receipt.txt: expected=invoices actual=invoices [On-device AI] “Paid in full by card: INR 850” · Local text
+PASS proposal.txt: expected=work actual=work [On-device AI] “Project manager will schedule weekly stakeholder reviews.” · Local text
+PASS memo.txt: expected=research actual=research [On-device AI] “Literature review of battery degradation: We compare twenty peer-reviewed studies of lithium-ion cycle life.” · Local text
+FAIL invoice-guide.txt: expected=review actual=work [On-device AI] “Instructions for making an invoice. Open a spreadsheet and add your business name.” · Local text
+PASS journal.txt: expected=personal actual=personal [On-device AI] “Today I went for a walk by the river. I enjoyed watching birds and wrote a poem about the changing seasons.” · Local text
+PASS home.txt: expected=personal actual=personal [On-device AI] “Applicant: Sam Patel. I am applying to rent apartment 24.” · Local text
+PASS revision.txt: expected=study actual=study [On-device AI] “Biology course study guide. Chapter 4 revision notes for next week’s school examination.” · Local text
+PASS photo.png: expected=images actual=images [Rule] File type .png
+PASS setup.dmg: expected=skipped actual=skipped Outside document scope (models, datasets, code, installers and compressed downloads stay here)
+PASS backup.zip: expected=skipped actual=skipped Outside document scope (models, datasets, code, installers and compressed downloads stay here)
+PASS unknown.bin: expected=skipped actual=skipped Outside document scope (models, datasets, code, installers and compressed downloads stay here)
+PASS model.safetensors: expected=skipped actual=skipped Outside document scope (models, datasets, code, installers and compressed downloads stay here)
+PASS dataset.jsonl: expected=skipped actual=skipped Outside document scope (models, datasets, code, installers and compressed downloads stay here)
+PASS custom-category: expected=Recipes actual=FDA6DC61-BC73-4C05-8C87-A21104F924C7 [On-device AI]
+PASS renamed-category: expected=Bills/invoices actual=invoices [On-device AI]
+Evaluation: 22/24. Synthetic representative fixtures; not an accuracy guarantee for personal documents.
+Fixtures retained at /var/folders/_0/d7lk9pm96y9b5t26z_53xrg40000gn/T/LocalSorter-Evaluation-8BACBAE8-FC54-4CE9-A67F-DB592241AA85

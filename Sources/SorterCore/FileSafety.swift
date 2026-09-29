@@ -22,9 +22,9 @@ public enum FileSafety {
         let v = try url.resourceValues(forKeys: [.isDirectoryKey, .isPackageKey])
         guard v.isDirectory == true, v.isPackage != true else { throw SorterError.message("Choose an ordinary folder: \(url.path)") }
     }
-    public static func skipReason(_ url: URL, destination: URL) -> String? {
+    public static func skipReason(_ url: URL, destination: URL, ignoreDestination: Bool = false) -> String? {
         let path = url.standardizedFileURL.path, d = destination.standardizedFileURL.path
-        if path == d || path.hasPrefix(d + "/") { return "Destination folder" }
+        if !ignoreDestination && (path == d || path.hasPrefix(d + "/")) { return "Destination folder" }
         let name = url.lastPathComponent.lowercased()
         if name.hasPrefix(".") || name.hasPrefix("~$") || name.hasSuffix("~") { return "Hidden or temporary file" }
         if temporaryExtensions.contains(url.pathExtension.lowercased()) { return "Incomplete download / temporary file" }

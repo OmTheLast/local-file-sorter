@@ -1,0 +1,46 @@
+[0/1] Planning build
+Building for debugging...
+[0/4] Write sources
+[1/4] Write swift-version--1AB21518FC5DEDBE.txt
+[3/7] Compiling SorterCore Types.swift
+[4/7] Emitting module SorterCore
+[5/7] Compiling SorterCore Classifier.swift
+[6/10] Compiling SorterCore AutomaticCycle.swift
+[7/10] Compiling SorterCore DocumentPolicy.swift
+[8/10] Compiling SorterCore Store.swift
+[8/12] Write sources
+[10/14] Emitting module SorterCheck
+[11/14] Compiling SorterCheck main.swift
+[11/14] Write Objects.LinkFileList
+[12/14] Linking SorterCheck
+[13/14] Applying SorterCheck
+Build of product 'SorterCheck' complete! (1.57s)
+Apple Intelligence available · on device
+FAIL invoice-1042.txt: expected=invoices actual=review [AI · review] AI supplied no verifiable supporting quote
+PASS document-001.txt: expected=invoices actual=invoices [On-device AI] “Please remit INR 12,500 for consulting services delivered in August. Bill to Acme Ltd. Total payable 12,500. Due date September 30.” · Local text
+PASS notes.txt: expected=work actual=work [On-device AI] “Engineering will complete the customer dashboard by Friday. Priya owns the API integration. The launch milestone is October 15. Action items: update the roadmap and send the client a status report.” · Local text
+PASS download.txt: expected=research actual=research [On-device AI] “Abstract: We investigate the relationship between soil moisture and plant growth. Methods: 120 seedlings were randomly assigned to four irrigation treatments. Results show a statistically significant increase in biomass.” · Local text
+PASS paper.txt: expected=research actual=research [On-device AI] “Research study on invoice fraud” · Local text
+FAIL personal.txt: expected=review actual=personal [On-device AI] “My favorite lentil soup
+Ingredients: lentils, onions, tomatoes and salt. Rinse the lentils and simmer for twenty minutes. Add chopped herbs and serve with warm bread.” · Local text
+PASS fragment.txt: expected=review actual=review [Rule] Insufficient readable text · Local text
+PASS attack.txt: expected=review actual=review [Rule] Document contains instruction-like text; manual review required
+PASS mixed.txt: expected=review actual=review [AI · review] On-device model found no single clear category
+PASS receipt.txt: expected=invoices actual=invoices [On-device AI] “Paid in full by card: INR 850
+Transaction date September 4 2026” · Local text
+PASS proposal.txt: expected=work actual=work [On-device AI] “Client proposal: redesign the Acme dashboard. Scope includes wireframes, implementation and acceptance testing. Delivery will take six weeks. The project manager will schedule weekly stakeholder reviews.” · Local text
+PASS memo.txt: expected=research actual=research [On-device AI] “We compare twenty peer-reviewed studies of lithium-ion cycle life.” · Local text
+FAIL invoice-guide.txt: expected=review actual=invoices [On-device AI] “This tutorial is a personal reminder, not an issued bill or payment request.” · Local text
+PASS journal.txt: expected=personal actual=personal [On-device AI] “Today I went for a walk by the river. I enjoyed watching birds and wrote a poem about the changing seasons.” · Local text
+PASS home.txt: expected=personal actual=personal [On-device AI] “Applicant: Sam Patel. I am applying to rent apartment 24. Previous residential address and personal references are attached for the landlord.” · Local text
+PASS revision.txt: expected=study actual=study [On-device AI] “Biology course study guide. Chapter 4 revision notes for next week’s school examination. Assignment: draw and label a plant cell. Practice questions: Explain the difference between mitosis and meiosis.” · Local text
+PASS photo.png: expected=images actual=images [Rule] File type .png
+PASS setup.dmg: expected=skipped actual=skipped Outside document scope (models, datasets, code, installers and compressed downloads stay here)
+PASS backup.zip: expected=skipped actual=skipped Outside document scope (models, datasets, code, installers and compressed downloads stay here)
+PASS unknown.bin: expected=skipped actual=skipped Outside document scope (models, datasets, code, installers and compressed downloads stay here)
+PASS model.safetensors: expected=skipped actual=skipped Outside document scope (models, datasets, code, installers and compressed downloads stay here)
+PASS dataset.jsonl: expected=skipped actual=skipped Outside document scope (models, datasets, code, installers and compressed downloads stay here)
+FAIL custom-category: expected=Recipes actual=personal [On-device AI]
+PASS renamed-category: expected=Bills/invoices actual=invoices [On-device AI]
+Evaluation: 20/24. Synthetic representative fixtures; not an accuracy guarantee for personal documents.
+Fixtures retained at /var/folders/_0/d7lk9pm96y9b5t26z_53xrg40000gn/T/LocalSorter-Evaluation-3E265BE9-CF22-4AF9-B9A2-22D5E86F6F0E

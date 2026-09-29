@@ -1,11 +1,13 @@
 import AppKit
 import PDFKit
+import CoreServices
 import SorterCore
 
 final class SafetyTests {
     func fixture() throws -> (URL, Settings, Journal, SorterEngine) {
         let root = URL(fileURLWithPath: "/private" + FileManager.default.temporaryDirectory.path).appendingPathComponent("LocalSorter-Test-\(UUID().uuidString)")
-        let settings = Settings(source: root.appendingPathComponent("Downloads"), destination: root.appendingPathComponent("Sorted"), useAI: false, settleSeconds: 5)
+        var settings = Settings(source: root.appendingPathComponent("Downloads"), destination: root.appendingPathComponent("Sorted"), useAI: false, settleSeconds: 5)
+        settings.browserDownloadsOnly = false
         try FileManager.default.createDirectory(at: settings.source, withIntermediateDirectories: true)
         let journal = try Journal(folder: root.appendingPathComponent("State"))
         return (root, settings, journal, SorterEngine(journal: journal))
@@ -133,7 +135,7 @@ final class SafetyTests {
     }
     func testRulesAndAIDisabledFallback() async throws {
         let (_, settings, _, _) = try fixture()
-        for (name, expected) in [("photo.jpg", "images"), ("setup.pkg", "installers"), ("backup.tar.gz", "archives"), ("unknown.exe", "review")] {
+        for (name, expected) in [("photo.jpg", "images"), ("setup.pkg", "review"), ("backup.tar.gz", "review"), ("unknown.exe", "review")] {
             XCTAssertEqual(Classifier.rule(settings.source.appendingPathComponent(name), settings: settings)?.categoryID, expected)
         }
         let text = settings.source.appendingPathComponent("notes.txt")
@@ -252,7 +254,7 @@ final class SafetyTests {
         let second = try await engine.sortNewArrivals(settings: settings, state: reloaded)
         XCTAssertEqual(second.moved.count, 2)
         XCTAssertTrue(FileSafety.exists(settings.destination.appendingPathComponent("Images/arrival.png")))
-        XCTAssertTrue(FileSafety.exists(settings.destination.appendingPathComponent("Needs Review/document.txt")))
+        XCTAssertTrue(FileSafety.exists(settings.destination.appendingPathComponent("Archives/document.txt")))
         XCTAssertTrue(FileSafety.exists(original)); XCTAssertTrue(FileSafety.exists(partial))
         var paused = reloaded; paused.enabled = false; try paused.save(journal: journal)
         let afterPause = settings.source.appendingPathComponent("paused.png"); try write(afterPause)
@@ -296,6 +298,63 @@ final class SafetyTests {
         XCTAssertFalse(try state.excludedPaths().contains(file.path))
         try "corrupt".write(to: journal.folder.appendingPathComponent("automation.json"), atomically: true, encoding: .utf8)
         XCTAssertThrowsError(try ArrivalState.load(journal: journal, source: settings.source, defaultEnabled: true))
+    }
+
+    func testDocumentEligibilityAndBrowserOrigin() throws {
+        XCTAssertTrue(Classifier.supports("Amount due: INR 24000", in: "Amount due:\nINR 24000"))
+        XCTAssertFalse(Classifier.supports("Amount due: INR 24000", in: "Amount due: INR 12000"))
+        let (_, original, _, _) = try fixture()
+        var settings = original; settings.browserDownloadsOnly = true
+        for name in ["model.gguf", "model.safetensors", "weights.bin", "model.pt", "data.csv", "dataset.parquet", "config.json", "config.yaml", "archive.zip", "setup.dmg"] {
+            let file = settings.source.appendingPathComponent(name); try write(file)
+            XCTAssertNotNil(DocumentPolicy.skipReason(file, settings: settings, automatic: false))
+            XCTAssertNotNil(DocumentPolicy.skipReason(file, settings: settings, automatic: true))
+        }
+        var file = settings.source.appendingPathComponent("paper.pdf"); try write(file)
+        XCTAssertNotNil(DocumentPolicy.skipReason(file, settings: settings, automatic: true))
+        XCTAssertEqual(DocumentPolicy.skipReason(file, settings: settings, automatic: false), nil)
+        var values = URLResourceValues()
+        values.quarantineProperties = [kLSQuarantineAgentBundleIdentifierKey as String: "com.apple.Safari", kLSQuarantineTypeKey as String: kLSQuarantineTypeWebDownload as String]
+        try file.setResourceValues(values)
+        XCTAssertEqual(DocumentPolicy.skipReason(file, settings: settings, automatic: true), nil)
+        values.quarantineProperties = [kLSQuarantineAgentBundleIdentifierKey as String: "com.example.terminal", kLSQuarantineTypeKey as String: kLSQuarantineTypeOtherDownload as String]
+        try file.setResourceValues(values)
+        XCTAssertNotNil(DocumentPolicy.skipReason(file, settings: settings, automatic: true))
+    }
+    func testSettingsUpgradeAndHistoricalReview() async throws {
+        let (_, settings, journal, engine) = try fixture()
+        let old = "{\"source\":\"file:///tmp\",\"destination\":\"file:///tmp/sorted\",\"categories\":[{\"id\":\"review\",\"name\":\"Needs Review\",\"detail\":\"uncertain\"},{\"id\":\"archives\",\"name\":\"Archives\",\"detail\":\"zip\"}],\"useAI\":true,\"settleSeconds\":15}"
+        let decoded = try JSONDecoder().decode(Settings.self, from: Data(old.utf8))
+        XCTAssertFalse(decoded.setupComplete); XCTAssertTrue(decoded.browserDownloadsOnly)
+        XCTAssertEqual(decoded.review.name, "Archives"); XCTAssertEqual(decoded.categories.count, 1)
+        let roundtrip = try JSONDecoder().decode(Settings.self, from: JSONEncoder().encode(decoded))
+        XCTAssertEqual(decoded, roundtrip)
+        var state = try ArrivalState(source: settings.source, enabled: true)
+        let unchecked = settings.source.appendingPathComponent("unchecked.txt"); try write(unchecked)
+        XCTAssertFalse(try state.excludedPaths().contains(unchecked.path))
+        try state.excludeExistingFiles(); try state.save(journal: journal)
+        let reloaded = try ArrivalState.load(journal: journal, source: settings.source)
+        XCTAssertTrue(try reloaded.excludedPaths().contains(unchecked.path))
+        var p = try proposal(settings); p.approved = true
+        let moved = try await engine.move(p, settings: settings)
+        var next = settings; next.destination = settings.destination.deletingLastPathComponent().appendingPathComponent("Documents")
+        _ = try await engine.scan(settings: next, includeHistory: true)
+        try await Task.sleep(for: .seconds(5.1))
+        let normal = try await engine.scan(settings: next)
+        XCTAssertFalse(normal.proposals.contains(where: { $0.source == moved.destination }))
+        _ = try await engine.scan(settings: next, includeHistory: true)
+        try await Task.sleep(for: .seconds(5.1))
+        let review = try await engine.scan(settings: next, includeHistory: true)
+        var existing = try XCTUnwrap(review.proposals.first(where: { $0.source == moved.destination }))
+        XCTAssertEqual(existing.source, moved.destination)
+        existing.approved = true
+        do { _ = try await engine.move(existing, settings: next); XCTFail("Historical file moved without explicit review scope") } catch {}
+        let relocated = try await engine.move(existing, settings: next, includeHistory: true)
+        XCTAssertTrue(FileSafety.exists(relocated.destination))
+        XCTAssertEqual(relocated.destination.deletingLastPathComponent().lastPathComponent, "Images")
+        _ = try await engine.undo(relocated.id)
+        XCTAssertTrue(FileSafety.exists(moved.destination))
+        XCTAssertEqual(try journal.records().count, 2)
     }
 
 }

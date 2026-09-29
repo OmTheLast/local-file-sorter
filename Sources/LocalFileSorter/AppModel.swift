@@ -16,12 +16,17 @@ import SorterCore
     @Published var hasPreview = false
     @Published var error: String?
     @Published var demo = false
+    @Published var showSetup = false
+    @Published var showExisting = false
+    @Published var reviewPrevious = true
+    private var resumeAfterReview = false
     private var journal: Journal?
     private var engine: SorterEngine?
     private var operation: Task<Void, Never>?
     private var monitor: Task<Void, Never>?
     private var arrivals: ArrivalState?
     private var failedArrivals = Set<String>()
+    var finishReviewTitle: String { resumeAfterReview ? "Finish & start automatic sorting" : "Finish review" }
     var selectedCount: Int { proposals.filter(\.approved).count }
     var canOperate: Bool { engine != nil }
 
@@ -31,7 +36,8 @@ import SorterCore
             let storage: URL
             if isDemo {
                 let root = URL(fileURLWithPath: "/private" + FileManager.default.temporaryDirectory.path).appendingPathComponent("LocalSorter-Preview-\(UUID().uuidString)")
-                settings = SorterCore.Settings(source: root.appendingPathComponent("Sample Downloads"), destination: root.appendingPathComponent("Sorted Files"))
+                settings = SorterCore.Settings(source: root.appendingPathComponent("Sample Downloads"), destination: root.appendingPathComponent("Documents"))
+                settings.browserDownloadsOnly = false
                 try FileManager.default.createDirectory(at: settings.source, withIntermediateDirectories: true)
                 for (name, body) in [
                     ("invoice-1042.txt", "Invoice number 1042\nNorthstar Design\nWebsite design services\nAmount due: INR 24000\nDue September 30."),
@@ -61,14 +67,19 @@ import SorterCore
             self.journal = journal; engine = SorterEngine(journal: journal)
             arrivals = try ArrivalState.load(journal: journal, source: settings.source)
             if isDemo { status = "Sample files only. Your Downloads are untouched." }
-            if arrivals?.enabled == true { enableAutomation() }
+            if !settings.setupComplete {
+                showSetup = true
+                pause()
+                status = "Choose folders and review existing documents to finish setup."
+            } else if arrivals?.enabled == true { enableAutomation() }
             else { status = "Automatic sorting is paused. Resume to sort new downloads." }
-        } catch { self.error = "Startup needs attention: \(error.localizedDescription). File operations are disabled." }
+        } catch { engine = nil; self.error = "Startup needs attention: \(error.localizedDescription). File operations are disabled." }
     }
-    func saveSettings(_ new: SorterCore.Settings) {
+    @discardableResult func saveSettings(_ new: SorterCore.Settings) -> Bool {
+        guard !busy else { error = "Wait for the current operation to stop before saving."; return false }
         if demo && (new.source != settings.source || new.destination != settings.destination) {
             error = "Open Local File Sorter (the main app) to choose real folders. Samples stays isolated."
-            return
+            return false
         }
         pause()
         do {
@@ -77,24 +88,39 @@ import SorterCore
             if let journal { arrivals = try ArrivalState.load(journal: journal, source: new.source, defaultEnabled: false) }
             failedArrivals = []
             status = "Settings saved. Resume automatic sorting when ready."
-        } catch { self.error = error.localizedDescription }
+            return true
+        } catch { self.error = error.localizedDescription; return false }
     }
-    func selectFolder(source: Bool) {
-        let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.canCreateDirectories = true
-        panel.prompt = source ? "Choose source" : "Choose destination"
-        if panel.runModal() == .OK, let url = panel.url {
-            var next = settings; if source { next.source = url } else { next.destination = url }; saveSettings(next)
-        }
+    func configure() { resumeAfterReview = false; pause(); showSetup = true }
+    func finishSetup(_ selected: SorterCore.Settings, reviewExisting: Bool, automatic: Bool) {
+        var next = selected; next.setupComplete = true
+        guard saveSettings(next) else { return }
+        showSetup = false
+        resumeAfterReview = automatic && reviewExisting
+        if reviewExisting { showExisting = true; scan() }
+        else if automatic { enableAutomation() }
     }
+    func finishReview() {
+        proposals = []; hasPreview = false
+        if resumeAfterReview { resumeAfterReview = false; enableAutomation() }
+        else { status = "Review finished. Resume automatic sorting when ready." }
+    }
+    func selectFolder(source: Bool) { configure() }
     func scan() {
-        guard !busy, let engine else { return }; pause(); busy = true; scanning = true; previewApproved = false; hasPreview = false
-        let snapshot = settings
+        guard !busy, let engine, let journal else { return }; pause()
+        do {
+            // Once offered for manual review, unchecked files must not become automatic arrivals.
+            try arrivals?.excludeExistingFiles()
+            try arrivals?.save(journal: journal)
+        } catch { self.error = error.localizedDescription; return }
+        busy = true; scanning = true; previewApproved = false; hasPreview = false
+        let snapshot = settings, includeHistory = reviewPrevious
         operation = Task {
             do {
                 status = "Checking files, then observing a \(Int(snapshot.settleSeconds))-second quiet period…"
-                _ = try await engine.scan(settings: snapshot)
+                _ = try await engine.scan(settings: snapshot, includeHistory: includeHistory)
                 try await Task.sleep(for: .seconds(snapshot.settleSeconds))
-                let result = try await engine.scan(settings: snapshot)
+                let result = try await engine.scan(settings: snapshot, includeHistory: includeHistory)
                 try Task.checkCancellation()
                 proposals = result.proposals; skipped = result.skipped; hasPreview = true
                 status = "\(proposals.count) proposed · \(result.waiting) still settling · \(skipped.count) skipped. Nothing has moved."
@@ -104,7 +130,7 @@ import SorterCore
             busy = false; scanning = false
         }
     }
-    func cancelScan() { operation?.cancel() }
+    func cancelScan() { operation?.cancel(); resumeAfterReview = false }
     func approvePreview() { previewApproved = true; status = "Preview approved. Sort checked files, or separately enable automatic sorting for new arrivals." }
     func selectAll(_ value: Bool) { for i in proposals.indices { proposals[i].approved = value } }
     func changeCategory(_ index: Int, to id: String) {
@@ -116,21 +142,23 @@ import SorterCore
     func sortSelected() {
         guard previewApproved, !busy, let engine else { return }
         pause(); busy = true
-        let selected = proposals.filter(\.approved), snapshot = settings
+        let selected = proposals.filter(\.approved), snapshot = settings, includeHistory = reviewPrevious
         operation = Task {
             var moved = 0; var failures: [String] = []
             for proposal in selected {
                 do {
-                    _ = try await engine.move(proposal, settings: snapshot)
+                    _ = try await engine.move(proposal, settings: snapshot, includeHistory: includeHistory)
                     proposals.removeAll { $0.id == proposal.id }; moved += 1
                 } catch { failures.append("\(proposal.source.lastPathComponent): \(error.localizedDescription)") }
             }
             refreshHistory(); status = "Sorted \(moved) \(moved == 1 ? "file" : "files"). You can undo moves in History."
             if !failures.isEmpty { self.error = failures.joined(separator: "\n") }
             busy = false
+
         }
     }
     func enableAutomation() {
+        guard settings.setupComplete else { configure(); return }
         guard !busy, !automation, let engine, let journal else { return }
         do {
             try settings.validate()
@@ -140,7 +168,7 @@ import SorterCore
         } catch { self.error = error.localizedDescription; return }
         failedArrivals = []
         automation = true
-        status = "Watching \(settings.source.lastPathComponent). Finished downloads sort automatically."
+        status = "Watching \(settings.source.lastPathComponent). Eligible documents sort into \(settings.destination.lastPathComponent)."
         monitor = Task {
             while !Task.isCancelled && automation {
                 do {
@@ -149,7 +177,7 @@ import SorterCore
                     busy = true
                     guard let arrivals else { throw SorterError.message("Automatic sorting state is unavailable.") }
                     let result = try await engine.sortNewArrivals(settings: settings, state: arrivals, failedPaths: failedArrivals)
-                    refreshHistory()
+                    if !result.moved.isEmpty { refreshHistory() }
                     guard !Task.isCancelled, automation else { busy = false; return }
                     skipped = result.skipped
                     for record in result.moved { proposals.removeAll { $0.source == record.original } }
@@ -192,5 +220,13 @@ import SorterCore
         }
     }
     func refreshHistory() { do { history = try journal?.records() ?? [] } catch { self.error = "History unreadable: \(error.localizedDescription)"; pause() } }
-    func reveal(_ url: URL) { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+    func reveal(_ url: URL) {
+        guard FileManager.default.fileExists(atPath: url.path) else { error = "This location no longer exists: \(url.path)"; return }
+        NSWorkspace.shared.activateFileViewerSelecting([url])
+    }
+    func openFolder(_ url: URL) {
+        guard FileManager.default.fileExists(atPath: url.path) else { error = "This folder has not been created yet: \(url.path)"; return }
+        NSWorkspace.shared.open(url)
+    }
+
 }

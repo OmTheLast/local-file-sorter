@@ -1,0 +1,14 @@
+[0/1] Planning build
+Building for production...
+[0/4] Write sources
+[2/4] Write swift-version--1AB21518FC5DEDBE.txt
+[4/5] Compiling SorterCore ArrivalState.swift
+[5/6] Compiling LocalFileSorter AppModel.swift
+[5/7] Write Objects.LinkFileList
+[6/7] Linking LocalFileSorter
+Build of product 'LocalFileSorter' complete! (6.28s)
+/Users/ompatnaik/Documents/Code/LocalFileSorter/dist/build.QM6YJT/Local File Sorter.app/Contents/Info.plist: OK
+/Users/ompatnaik/Documents/Code/LocalFileSorter/dist/build.QM6YJT/Local File Sorter.app: replacing existing signature
+Built /Users/ompatnaik/Documents/Code/LocalFileSorter/dist/Local File Sorter.app
+/Users/ompatnaik/Documents/Code/LocalFileSorter/dist/build.QM6YJT/Local File Sorter Samples.app: replacing existing signature
+Built sample app /Users/ompatnaik/Documents/Code/LocalFileSorter/dist/Local File Sorter Samples.app

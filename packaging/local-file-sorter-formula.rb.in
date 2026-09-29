@@ -28,8 +28,8 @@ class LocalFileSorter < Formula
 
   def caveats
     <<~EOS
-      Run local-file-sorter to open the app, then enable automatic sorting.
-      The app is built on your Mac; no Apple Developer membership is needed.
+      Run local-file-sorter to choose folders and review existing documents.
+      Enable automatic sorting in setup for new browser downloads.
       For login startup, add the path printed by local-file-sorter --path
       to System Settings > General > Login Items.
       Quit the app before upgrading or uninstalling. Settings, sorted files

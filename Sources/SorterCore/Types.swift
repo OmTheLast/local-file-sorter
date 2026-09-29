@@ -8,12 +8,12 @@ public struct Category: Codable, Identifiable, Equatable, Sendable {
     public init(id: String = UUID().uuidString, name: String, detail: String) { self.id = id; self.name = name; self.detail = detail }
     public static let defaults = [
         Category(id: "invoices", name: "Invoices", detail: "Bills, receipts, payment requests and tax invoices."),
-        Category(id: "work", name: "Work", detail: "Project plans, business correspondence, meeting notes and professional deliverables."),
+        Category(id: "work", name: "Work", detail: "Specific project plans, business correspondence, meeting notes and professional deliverables. Excludes generic tutorials and how-to guides."),
         Category(id: "research", name: "Research", detail: "Academic papers, experiments, studies, literature reviews and technical research."),
+        Category(id: "personal", name: "Personal", detail: "Personal letters, diaries, applications, completed forms and household records. Excludes recipes, vague fragments, tutorials and general reference material."),
+        Category(id: "study", name: "Study", detail: "Course notes, assignments, practice tests, school reports and study guides. Academic journal papers belong in Research."),
         Category(id: "images", name: "Images", detail: "Photographs and image files."),
-        Category(id: "installers", name: "Installers", detail: "Disk images and installation packages."),
-        Category(id: "archives", name: "Archives", detail: "Compressed archives."),
-        Category(id: "review", name: "Needs Review", detail: "Unsupported, ambiguous, unreadable or uncertain files.")
+        Category(id: "review", name: "Archives", detail: "Documents whose category is uncertain or whose text cannot be read.")
     ]
 }
 public struct Settings: Codable, Equatable, Sendable {
@@ -21,12 +21,41 @@ public struct Settings: Codable, Equatable, Sendable {
     public var destination: URL
     public var categories: [Category]
     public var useAI: Bool
+    public var setupComplete: Bool = false
+    public var includeImages: Bool = true
+    public var browserDownloadsOnly: Bool = true
     public var settleSeconds: Double
-    public init(source: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Downloads"), destination: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/Sorted Files"), categories: [Category] = Category.defaults, useAI: Bool = true, settleSeconds: Double = 15) {
+    public init(source: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Downloads"), destination: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents"), categories: [Category] = Category.defaults, useAI: Bool = true, settleSeconds: Double = 15) {
         self.source = source; self.destination = destination; self.categories = categories; self.useAI = useAI; self.settleSeconds = settleSeconds
     }
+    private enum CodingKeys: String, CodingKey {
+        case source, destination, categories, useAI, settleSeconds, setupComplete, includeImages, browserDownloadsOnly
+    }
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        source = try c.decode(URL.self, forKey: .source)
+        destination = try c.decode(URL.self, forKey: .destination)
+        categories = try c.decode([Category].self, forKey: .categories)
+        useAI = try c.decode(Bool.self, forKey: .useAI)
+        settleSeconds = try c.decode(Double.self, forKey: .settleSeconds)
+        setupComplete = try c.decodeIfPresent(Bool.self, forKey: .setupComplete) ?? false
+        includeImages = try c.decodeIfPresent(Bool.self, forKey: .includeImages) ?? true
+        browserDownloadsOnly = try c.decodeIfPresent(Bool.self, forKey: .browserDownloadsOnly) ?? true
+        if !setupComplete {
+            let home = FileManager.default.homeDirectoryForCurrentUser
+            if destination.standardizedFileURL.path == home.appendingPathComponent("Documents/Sorted Files").path {
+                destination = home.appendingPathComponent("Documents")
+            }
+            if let i = categories.firstIndex(where: { $0.id == "review" && $0.name == "Needs Review" }),
+               !categories.contains(where: { $0.name == "Archives" && $0.id != "archives" }) {
+                categories[i].name = "Archives"
+                categories[i].detail = "Documents whose category is uncertain or whose text cannot be read."
+                categories.removeAll { $0.id == "archives" && $0.name == "Archives" || $0.id == "installers" && $0.name == "Installers" }
+            }
+        }
+    }
     public func validate() throws {
-        guard categories.contains(where: { $0.id == "review" }), (1...16).contains(categories.count) else { throw SorterError.message("Keep Needs Review and at most 16 categories.") }
+        guard categories.contains(where: { $0.id == "review" }), (1...16).contains(categories.count) else { throw SorterError.message("Keep the fallback category and at most 16 categories.") }
         var names = Set<String>(); var ids = Set<String>()
         for c in categories {
             let n = c.name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -79,7 +108,7 @@ public struct MoveRecord: Codable, Identifiable, Sendable {
     public var id: UUID = UUID(); public var date: Date = Date()
     public var original: URL; public var destination: URL; public var fingerprint: Fingerprint
     public var digest: String; public var reason: String; public var state: String = "pending"
-    public var undoDestination: URL?; public var note: String?
+    public var undoDestination: URL?; public var note: String?; public var categoryID: String?
     public init(original: URL, destination: URL, fingerprint: Fingerprint, digest: String, reason: String) {
         self.original = original; self.destination = destination; self.fingerprint = fingerprint; self.digest = digest; self.reason = reason
     }

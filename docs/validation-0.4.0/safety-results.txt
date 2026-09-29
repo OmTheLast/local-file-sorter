@@ -1,0 +1,37 @@
+Building for debugging...
+[0/4] Write sources
+[1/4] Write swift-version--1AB21518FC5DEDBE.txt
+[3/6] Compiling SorterCore ArrivalState.swift
+[4/6] Emitting module SorterCore
+[5/7] Compiling SorterCore AutomaticCycle.swift
+[5/9] Write sources
+[7/11] Emitting module SorterTests
+[8/11] Compiling SorterTests SafetyTests.swift
+[8/11] Write Objects.LinkFileList
+[9/11] Linking SorterTests
+[10/11] Applying SorterTests
+Build of product 'SorterTests' complete! (1.38s)
+CoreGraphics PDF has logged an error. Set environment variable "CG_PDF_VERBOSE" to learn more.
+PASS approval and destination collision
+PASS undo with original collision
+PASS undo rejects modified files
+PASS stale preview
+PASS download stability and writer detection
+PASS hidden/temp/link/alias/bundle/destination skips
+PASS configuration traversal and name validation
+PASS write-ahead crash recovery and process lock
+PASS interrupted move and undo recovery
+PASS corrupt history fails closed
+PASS rules, AI-disabled fallback and injection
+PASS read-only preview and automation baseline
+PASS DOCX/XLSX/PPTX/RTF local extraction
+PASS scanned PDF Vision OCR
+PASS destination symlink and kernel no-replace
+PASS native PDF / DOC / ODT local extraction
+PASS extraction limits and subprocess timeout
+PASS persistent arrivals, automatic fallback, pause and undo
+PASS document eligibility and browser origin
+PASS settings upgrade and existing-history review
+PASS first-install opt-in and upgrade preserves automation
+PASS original edits, same-name new download and corrupt automation state
+Safety suites: 22, assertion failures: 0

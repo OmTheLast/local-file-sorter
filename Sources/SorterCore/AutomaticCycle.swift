@@ -12,12 +12,13 @@ extension SorterEngine {
         guard state.source.standardizedFileURL.path == settings.source.standardizedFileURL.path else {
             throw SorterError.message("Automatic sorting source changed; initialize its exclusions before sorting.")
         }
-        let scan = try await scan(settings: settings, excluding: try state.excludedPaths().union(failedPaths))
+        let scan = try await scan(settings: settings, excluding: try state.excludedPaths().union(failedPaths), automatic: true)
         var result = AutomaticResult()
         result.skipped = scan.skipped; result.waiting = scan.waiting
         for var proposal in scan.proposals {
             try Task.checkCancellation()
             // Standing approval applies only to arrivals outside the persistent baseline.
+            if let reason = DocumentPolicy.skipReason(proposal.source, settings: settings, automatic: true) { result.skipped.append("\(proposal.source.lastPathComponent): \(reason)"); continue }
             proposal.approved = true
             do { result.moved.append(try move(proposal, settings: settings)) }
             catch {

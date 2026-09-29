@@ -26,10 +26,11 @@ private enum Page: String, CaseIterable, Identifiable {
 struct ContentView: View {
     @ObservedObject var model: AppModel
     @State private var page: Page = .automation
+    @State private var locationRecord: MoveRecord?
     @State private var categories = false
     @State private var confirmSort = false
     @State private var reviewOnly = false
-    private var locked: Bool { model.busy || model.automation }
+    private var locked: Bool { model.busy }
     private var reviewCount: Int { model.proposals.filter { $0.categoryID == "review" }.count }
 
     var body: some View {
@@ -68,6 +69,9 @@ struct ContentView: View {
             }.padding(26)
         }
         .background(Color(nsColor: .windowBackgroundColor))
+        .sheet(isPresented: $model.showSetup) { SetupView(model: model, draft: model.settings) }
+        .sheet(item: $locationRecord) { MoveLocationsView(record: $0, model: model) }
+        .onChange(of: model.showExisting) { _, value in if value { page = .review; model.showExisting = false } }
         .sheet(isPresented: $categories) { CategoriesView(settings: model.settings) { model.saveSettings($0) } }
         .sheet(isPresented: $confirmSort) { sortConfirmation }
         .alert("Needs attention", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) {
@@ -76,7 +80,7 @@ struct ContentView: View {
     }
     private var subtitle: String {
         switch page {
-        case .review: return "Optionally sort files that were already in your Downloads."
+        case .review: return "Review existing documents and choose their destinations."
         case .history: return "See completed moves and restore files."
         case .automation: return "Finished downloads go straight into the right folder."
         case .settings: return "Choose your folders and organize your categories."
@@ -87,7 +91,7 @@ struct ContentView: View {
             Label("File Sorter", systemImage: "tray.2.fill").font(.title3.weight(.semibold)).padding(.horizontal, 10).padding(.top, 12)
             VStack(spacing: 5) {
                 ForEach(Page.allCases) { item in
-                    Button { page = item } label: {
+                    Button { page = item; if item == .review || item == .settings { model.pause() } } label: {
                         HStack(spacing: 10) {
                             Image(systemName: item.icon).frame(width: 20)
                             Text(item.rawValue)
@@ -115,7 +119,7 @@ struct ContentView: View {
             Image(systemName: "arrow.right").foregroundStyle(.secondary)
             routeLabel("SORT INTO", model.settings.destination)
             Spacer()
-            Button("Change…") { page = .settings }
+            Button("Configure…") { model.configure() }
         }.padding(16).background(.quaternary.opacity(0.45), in: RoundedRectangle(cornerRadius: 10))
     }
     private func routeLabel(_ label: String, _ url: URL) -> some View {
@@ -127,6 +131,7 @@ struct ContentView: View {
     private var review: some View {
         VStack(alignment: .leading, spacing: 16) {
             folderRoute
+            Toggle("Include unchanged documents previously moved by File Sorter", isOn: $model.reviewPrevious).disabled(model.busy || model.hasPreview)
             HStack(spacing: 12) {
                 step("1", "Scan", active: !model.hasPreview)
                 Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
@@ -176,9 +181,10 @@ struct ContentView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(model.selectedCount == 0 ? "Select files to sort" : "\(model.selectedCount) selected").font(.headline)
-                        Text("Nothing moves until you confirm.").font(.caption).foregroundStyle(.secondary)
+                        Text("Nothing moves until you confirm. Unchecked files stay where they are.").font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
+                    Button(model.finishReviewTitle) { model.finishReview(); page = .automation }.disabled(locked)
                     Button("Sort selected…", systemImage: "folder.badge.plus") { confirmSort = true }
                         .buttonStyle(.borderedProminent).controlSize(.large).disabled(model.selectedCount == 0 || locked || !model.hasPreview)
                 }
@@ -235,18 +241,17 @@ struct ContentView: View {
                                 Image(systemName: record.state == "undone" ? "arrow.uturn.backward.circle" : "doc")
                                 Text(record.original.lastPathComponent).font(.headline)
                                 Spacer()
-                                Text(historyState(record.state)).font(.caption).foregroundStyle(.secondary)
+                                Text(record.state == "moved" && record.categoryID == "review" ? "Archived · needs review" : historyState(record.state)).font(.caption).foregroundStyle(.secondary)
                                 Button("Undo move") { model.undo(record) }.disabled(record.state != "moved" || model.busy)
                             }
                             Text(record.date.formatted(date: .abbreviated, time: .shortened)).font(.caption).foregroundStyle(.secondary)
                             if let note = record.note { Text(note).font(.callout).foregroundStyle(.secondary) }
-                            DisclosureGroup("Locations") {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    pathLine("Original location", record.original)
-                                    pathLine("Sorted location", record.destination)
-                                    if let restored = record.undoDestination { pathLine("Restored to", restored) }
-                                }.padding(.top, 8)
-                            }.font(.caption)
+                            Text("Reason: \(record.reason)").font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
+                            HStack {
+                                Button("Locations…", systemImage: "folder") { locationRecord = record }.accessibilityIdentifier("locations-" + record.id.uuidString)
+                                Button("Show in Finder") { model.reveal(record.undoDestination ?? record.destination) }
+                                    .disabled(!FileManager.default.fileExists(atPath: (record.undoDestination ?? record.destination).path))
+                            }
                         }.padding(16).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
                     }
                 } }
@@ -262,7 +267,7 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(model.automation ? "Your downloads sort themselves" : "Automatic sorting is paused")
                         .font(.title2.weight(.semibold))
-                    Text(model.automation ? "Download a file as usual. Once it finishes, it moves into Sorted Files automatically. No scan or approval needed." : "Resume to automatically sort new downloads. Files that were present at first setup stay untouched.")
+                    Text(model.automation ? "Eligible downloads move into category folders inside \(model.settings.destination.lastPathComponent)." : "Review existing documents or resume sorting new browser downloads.")
                         .foregroundStyle(.secondary)
                     Button(model.automation ? "Pause sorting" : "Resume automatic sorting") {
                         if model.automation { model.pause() } else { model.enableAutomation() }
@@ -271,14 +276,22 @@ struct ContentView: View {
             }.padding(24).frame(maxWidth: .infinity, alignment: .leading)
                 .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 12))
             VStack(alignment: .leading, spacing: 14) {
-                Label("Documents are classified on this Mac with Apple Intelligence.", systemImage: "cpu")
-                Label("Uncertain or unreadable files go into Needs Review automatically.", systemImage: "questionmark.folder")
+                Label(model.settings.useAI ? model.modelStatus : "Apple Intelligence is off · content needs manual review", systemImage: "cpu")
+                Label("Uncertain documents go to \(model.settings.review.name); History explains why.", systemImage: "questionmark.folder")
                 Label("Original filenames stay the same. Undo is available in History.", systemImage: "arrow.uturn.backward")
                 Label("Close this window to keep sorting in the menu bar.", systemImage: "menubar.rectangle")
             }.font(.callout).foregroundStyle(.secondary)
             HStack {
-                Button("Open Sorted Files", systemImage: "folder") { model.reveal(model.settings.destination) }
+                Button("Open destination", systemImage: "folder") { model.openFolder(model.settings.destination) }
+                Button("Review existing documents") { model.pause(); page = .review; model.scan() }.disabled(model.busy)
+                Button("Configure…") { model.configure() }
                 Button("View history") { page = .history }
+            }
+            if let archived = model.history.first(where: { $0.state == "moved" && $0.categoryID == "review" }) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Archived for review: \(archived.original.lastPathComponent)").font(.callout.bold())
+                    Text(archived.reason).font(.caption).foregroundStyle(.secondary).lineLimit(3)
+                }
             }
             Text(model.demo ? "This sample app watches only its temporary folder. Your actual Downloads are untouched." : "Pause is remembered across restarts. Quit stops sorting until the app is opened again. To start at login, add it in System Settings → General → Login Items.")
                 .font(.caption).foregroundStyle(.secondary)
@@ -303,10 +316,11 @@ struct ContentView: View {
                     Spacer()
                     Button("Edit categories…") { categories = true }.disabled(locked)
                 }
+                Button("Configure folders and sorting…") { model.configure() }
                 Divider()
                 VStack(alignment: .leading, spacing: 10) {
                     Toggle("Use Apple Intelligence for documents", isOn: Binding(get: { model.settings.useAI }, set: { var s = model.settings; s.useAI = $0; model.saveSettings(s) })).disabled(locked)
-                    Text("Classifies documents on this Mac. When AI is off or unavailable, documents go to Needs Review; file-type rules still work.").font(.callout).foregroundStyle(.secondary)
+                    Text("Classifies documents on this Mac. When AI is off or unavailable, documents go to the fallback folder with a reason in History.").font(.callout).foregroundStyle(.secondary)
                     Label(model.modelStatus, systemImage: "cpu").font(.caption).foregroundStyle(.secondary)
                 }
             }.frame(maxWidth: 720, alignment: .leading)
@@ -319,7 +333,7 @@ struct ContentView: View {
                 Text(url.path.replacingOccurrences(of: FileManager.default.homeDirectoryForCurrentUser.path, with: "~")).font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
             }
             Spacer()
-            Button("Choose…") { model.selectFolder(source: source) }.disabled(locked || model.demo)
+            Button("Choose…") { model.selectFolder(source: source) }.disabled(model.demo)
         }
     }
     private func historyState(_ state: String) -> String {
@@ -338,10 +352,10 @@ private struct ProposalRow: View {
     let locked: Bool
     @Binding var selected: Bool
     var changeCategory: (String) -> Void
-    private var category: String { categories.first { $0.id == proposal.categoryID }?.name ?? "Needs Review" }
+    private var category: String { categories.first { $0.id == proposal.categoryID }?.name ?? "Archives" }
     private var collision: Bool { proposal.destination.deletingLastPathComponent().lastPathComponent != category }
     private var explanation: String {
-        if proposal.method == "Fallback" { return "Couldn’t classify this file. Choose a folder or scan again." }
+        if proposal.categoryID == "review" { return "\(category): \(proposal.reason)" }
         if proposal.method == "On-device AI" { return "Document content suggests \(category)." }
         return proposal.reason
     }

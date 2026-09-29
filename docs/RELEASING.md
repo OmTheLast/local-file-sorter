@@ -1,6 +1,6 @@
-# Free Homebrew source release
+# Homebrew source release
 
-Local File Sorter is distributed as a **Homebrew formula that compiles on the user's Mac**. No Apple Developer membership, Developer ID certificate, notarization service, cloud AI or paid dependency is required. This is a third-party tap, not an official Homebrew/core package.
+Local File Sorter is distributed as a **Homebrew formula that compiles on the user's Mac**. This is a third-party tap, not an official Homebrew/core package.
 
 ## Installation
 
@@ -18,7 +18,7 @@ The formula verifies the source archive's SHA-256 and compiles the native app lo
 
 There are no third-party runtime dependencies. Homebrew may need to install/update its own runtime as part of its normal operation. Building uses the Apple Swift compiler and SDK. The source release archive contains tracked project files only, with no app bundle, user settings, Downloads, undo history, credentials, or build cache.
 
-Fresh installs start paused. Open the app, choose folders/categories if desired and click **Resume automatic sorting** once. Completed downloads then sort automatically, including uncertain files going to Needs Review. Existing files stay excluded. Close the window to keep sorting. Pause and Undo are available in the app. Upgrades preserve the saved enabled/paused choice.
+Open the app and complete **Set up document sorting**. Choose folders/categories and review existing documents before approving moves. New eligible browser downloads then sort automatically if enabled in setup; uncertain documents go to Archives with a reason. Upgrading from a version before 0.4 pauses sorting and asks you to confirm the new document scope and destination. Close the window to keep sorting. Pause and Undo are available in the app.
 
 Commands:
 

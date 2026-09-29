@@ -4,17 +4,21 @@ Implementation notes, safety behavior, and historical test results for maintaine
 
 ## Classification and extraction
 
-- Images, disk images/installers and archives use extension/UTType rules. Category renaming retains their built-in rule assignment; removing the corresponding category routes those files to review.
+- Eligibility is checked before extraction: PDFs, DOC/DOCX, RTF, ODT, XLSX, PPTX, TXT and Markdown are supported; images are optional. Model weights, data/config formats, installers and compressed downloads are excluded. Images use extension/UTType rules; removing Images routes eligible images to the fallback category.
 - Documents use filename plus extracted text to classify their main purpose. Invoices use content classification: an early keyword rule misclassified an invoice tutorial and was removed after evaluation.
-- PDFKit reads embedded PDF text; Vision performs local OCR on pages with little readable text. Plain UTF-8/UTF-16 text, Markdown, CSV/TSV, JSON/YAML, logs and TeX are supported.
+- PDFKit reads embedded PDF text; Vision performs local OCR on pages with little readable text. Plain UTF-8/UTF-16 text and Markdown are eligible. The extractor also understands other text formats internally, but dataset/config formats are excluded by the document policy.
 - DOCX, XLSX and PPTX read bounded text members from ZIP containers using the system `unzip`; XML external entities are disabled and entity declarations rejected. DOC, RTF and ODT use system `textutil`. These are text-only conversions: spreadsheet formulas, slides' images/charts, embedded objects, macros and Office formatting are not interpreted or executed.
-- Apple `SystemLanguageModel.default` performs on-device classification. A dynamic generation schema restricts output to the configured category IDs. Every non-review AI decision must supply an exact supporting quote found in the extracted text. No confidence value is requested or used. A valid quote does **not** prove the category is correct; representative evaluation and checking History/Needs Review remain important.
+- Apple `SystemLanguageModel.default` performs on-device classification. A dynamic generation schema restricts output to configured category names, which are mapped back to stable IDs. Every non-review AI decision must supply an exact supporting quote found in the extracted text. Whitespace is normalized before verifying quotes. A second on-device check must find the category definition fits the document. No confidence value is requested or used. A valid quote does **not** prove the category is correct; representative evaluation and checking History/Archives remain important.
 - Contents and filenames are untrusted data. They are serialized separately from the classifier's instructions, no model tools are provided, and common instruction-injection patterns route to review. This is defense in depth, not a claim that arbitrary prompt injection is solved.
-- Unsupported, empty, encrypted, unreadable, ambiguous or incompletely extracted documents go to Needs Review (or propose it in manual preview). AI errors, refusals and unavailable models fall back to review. Disabling AI leaves rules, preview, category overrides, manual sorting and undo usable.
+- Empty, encrypted, unreadable, ambiguous or incompletely extracted eligible documents go to Archives (or propose it in manual preview). AI errors, refusals and unavailable models fall back to review. Disabling AI leaves rules, preview, category overrides, manual sorting and undo usable.
 
 ## File safety and history
 
 Only the source's top-level regular files are considered. The app skips hidden files, temporary names/extensions, unfinished downloads, aliases, symbolic links, folders, bundles, and non-downloaded cloud placeholders. It does not request cloud-placeholder downloads. The destination may be a subfolder of the source; it is excluded from scanning.
+
+By default, automation also requires macOS quarantine metadata naming a recognized browser. Missing/terminal metadata means the file stays untouched. This is an origin heuristic, not proof of provenance. The user can turn it off in setup; document eligibility still applies. Existing-file review ignores origin filtering and the automation baseline. It can explicitly include unchanged destinations from the app’s move journal, verified again at move time. It never recursively scans Documents or arbitrary folders.
+
+Upgrades from the previous setup pause automation and show folder configuration. Only the old default `~/Documents/Sorted Files` is migrated to `~/Documents`; custom destinations remain intact. Old default Needs Review becomes Archives and the old installer/compressed-file categories are retired. Existing files stay put until an approved review.
 
 Monitoring polls every three seconds while enabled, normally moving completed files after roughly 15–20 seconds of stability. A file must have unchanged inode/device, size and timestamps across observations for at least 15 seconds, an old-enough modification time, and no writer reported by `lsof`. Move-time checks repeat these conditions, take an advisory lock and verify a SHA-256 digest. Readiness is a conservative heuristic: an arbitrary application can close a file and resume writing later. It is not possible to prove completion for every writer. Common browsers' partial-download extensions are always skipped.
 
@@ -25,6 +29,10 @@ The normal app stores settings, persistent automation state/exclusions and move 
 Records are written and flushed before each move or undo. At startup, interrupted operations are reconciled against file identity and content hashes. Ambiguous recovery leaves files untouched with an `attention` record. Corrupt/unreadable history blocks operations rather than resetting or discarding it. Keep the history directory if you want undo.
 
 Undo verifies file identity and content, then restores the original path. If that path is occupied, it restores into `OriginalParent/Duplicates/<UUID>/original-name.ext`, preserving both files. That nested folder is not automatically rescanned.
+
+## Current validation
+
+See [0.4.0 validation](RELEASE_VALIDATION_0.4.0.md) for the current scope, setup, existing-file review and Locations fixes. Older results below document previous versions.
 
 ## Tested on this Mac
 

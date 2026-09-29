@@ -18,8 +18,17 @@ import SorterCore
             ("proposal.txt", "Client proposal: redesign the Acme dashboard. Scope includes wireframes, implementation and acceptance testing. Delivery will take six weeks. The project manager will schedule weekly stakeholder reviews.", "work"),
             ("memo.txt", "Literature review of battery degradation: We compare twenty peer-reviewed studies of lithium-ion cycle life. Experimental protocols differ in temperature and charge rate. Future research should standardize measurement of capacity loss.", "research"),
             ("invoice-guide.txt", "Instructions for making an invoice. Open a spreadsheet and add your business name. Enter an invoice number and calculate the amount due. This tutorial is a personal reminder, not an issued bill or payment request.", "review"),
-            ("journal.txt", "Today I went for a walk by the river. I enjoyed watching birds and wrote a poem about the changing seasons. Tomorrow I may visit a friend and cook dinner.", "review"),
-            ("photo.png", "fixture", "images"), ("setup.dmg", "fixture", "installers"), ("backup.zip", "fixture", "archives"), ("unknown.bin", "fixture", "review")
+            ("journal.txt", "Today I went for a walk by the river. I enjoyed watching birds and wrote a poem about the changing seasons. Tomorrow I may visit a friend and cook dinner.", "personal"),
+            ("home.txt", "Household record: My home rental application. Applicant: Sam Patel. I am applying to rent apartment 24. Previous residential address and personal references are attached for the landlord.", "personal"),
+            ("revision.txt", "Biology course study guide. Chapter 4 revision notes for next week’s school examination. Assignment: draw and label a plant cell. Practice questions: Explain the difference between mitosis and meiosis.", "study"),
+            ("payment-new.txt", "Statement of charges from Riverside Plumbing to customer Lee. Pipe replacement completed 12 September. Balance outstanding: USD 180. Please pay within fourteen days using customer reference RP204.", "invoices"),
+            ("work-new.txt", "Release planning meeting for the Mercury customer portal. Maya will complete the sign-in page by Wednesday; Arun will review accessibility. The client approved the revised launch schedule and requested a progress report on Friday.", "work"),
+            ("research-new.txt", "Abstract: This paper compares three approaches to urban heat mapping. We collected surface-temperature measurements at 36 sites over six months. Results suggest tree cover explains a significant fraction of the observed variance. Limitations include seasonal sampling bias.", "research"),
+            ("school-new.txt", "Chemistry homework for Grade 11. Assignment due Monday: balance the following equations and explain conservation of mass. Revise chapter two before the class quiz. Show all working and submit your answers to the teacher.", "study"),
+            ("personal-new.txt", "Dear Alex, Thank you for inviting me to your birthday gathering. I will arrive on Saturday with my sister and bring the photographs from our family holiday. It has been far too long since we all met. Love, Jamie.", "personal"),
+            ("recipe-new.txt", "Roasted carrot salad. Ingredients: carrots, olive oil, lemon juice and parsley. Heat the oven, roast the carrots until tender, then toss with the lemon dressing. Serve warm with a little chopped parsley.", "review"),
+            ("ambiguous-new.txt", "A handful of unrelated snippets: remember to buy lemons, an unfinished office presentation title, the opening line of a poem, and a link to a science article. No complete document or consistent topic is present.", "review"),
+            ("photo.png", "fixture", "images"), ("setup.dmg", "fixture", "skipped"), ("backup.zip", "fixture", "skipped"), ("unknown.bin", "fixture", "skipped"), ("model.safetensors", "fixture", "skipped"), ("dataset.jsonl", "fixture", "skipped")
         ]
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("LocalSorter-Evaluation-\(UUID().uuidString)")
         do {
@@ -27,6 +36,11 @@ import SorterCore
             var passed = 0
             for (name, body, expected) in examples {
                 let url = root.appendingPathComponent(name); try body.write(to: url, atomically: true, encoding: .utf8)
+                if let reason = DocumentPolicy.skipReason(url, settings: Settings(), automatic: false) {
+                    let correct = expected == "skipped"; if correct { passed += 1 }
+                    print("\(correct ? "PASS" : "FAIL") \(name): expected=\(expected) actual=skipped \(reason)")
+                    continue
+                }
                 let result = await Classifier.classify(url, settings: Settings())
                 let correct = result.categoryID == expected; if correct { passed += 1 }
                 print("\(correct ? "PASS" : "FAIL") \(name): expected=\(expected) actual=\(result.categoryID) [\(result.method)] \(result.reason)")

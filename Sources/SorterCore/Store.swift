@@ -66,15 +66,17 @@ public actor SorterEngine {
     private var stability = StabilityTracker()
     private let journal: Journal
     public init(journal: Journal) { self.journal = journal }
-    public func scan(settings: Settings, excluding: Set<String> = []) async throws -> ScanResult {
+    public func scan(settings: Settings, excluding: Set<String> = [], automatic: Bool = false, includeHistory: Bool = false) async throws -> ScanResult {
         try settings.validate()
-        let urls = try FileManager.default.contentsOfDirectory(at: settings.source, includingPropertiesForKeys: nil).sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
+        let previous = includeHistory && !automatic ? try historicalSources() : Set<URL>()
+        let urls = Set(try FileManager.default.contentsOfDirectory(at: settings.source, includingPropertiesForKeys: nil)).union(previous).sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
         var result = ScanResult(); var reserved = Set<String>()
         stability.prune(paths: Set(urls.map(\.path)))
         for url in urls {
             if excluding.contains(url.path) { continue }
             try Task.checkCancellation()
-            if let reason = FileSafety.skipReason(url, destination: settings.destination) { result.skipped.append("\(url.lastPathComponent): \(reason)"); continue }
+            if let reason = FileSafety.skipReason(url, destination: settings.destination, ignoreDestination: previous.contains(url)) { result.skipped.append("\(url.lastPathComponent): \(reason)"); continue }
+            if let reason = DocumentPolicy.skipReason(url, settings: settings, automatic: automatic) { result.skipped.append("\(url.lastPathComponent): \(reason)"); continue }
             do {
                 let fp = try Fingerprint(url)
                 guard stability.isReady(url, fingerprint: fp, interval: settings.settleSeconds) else { result.waiting += 1; continue }
@@ -83,6 +85,7 @@ public actor SorterEngine {
                 guard try Fingerprint(url) == fp else { result.waiting += 1; continue }
                 let category = settings.categories.first { $0.id == decision.categoryID } ?? settings.review
                 let requested = settings.destination.appendingPathComponent(category.name).appendingPathComponent(url.lastPathComponent)
+                if requested.standardizedFileURL.path == url.standardizedFileURL.path { result.skipped.append("\(url.lastPathComponent): Already in \(category.name)"); continue }
                 let destination = FileSafety.collisionSafe(requested, reserved: reserved); reserved.insert(destination.path)
                 result.proposals.append(Proposal(source: url, destination: destination, fingerprint: fp, decision: decision))
             } catch {
@@ -92,11 +95,19 @@ public actor SorterEngine {
         }
         return result
     }
-    public func move(_ proposal: Proposal, settings: Settings) throws -> MoveRecord {
+    private func historicalSources() throws -> Set<URL> {
+        Set(try journal.records().compactMap { record in
+            guard record.state == "moved", let current = try? Fingerprint(record.destination), current.sameIdentity(as: record.fingerprint) else { return nil }
+            return record.destination
+        })
+    }
+    public func move(_ proposal: Proposal, settings: Settings, includeHistory: Bool = false) throws -> MoveRecord {
         try settings.validate()
         _ = try journal.records() // Refuse new moves if persistent history is unreadable.
         guard proposal.approved else { throw SorterError.message("This file has not been approved.") }
-        guard proposal.source.deletingLastPathComponent().standardizedFileURL.path == settings.source.standardizedFileURL.path, FileSafety.skipReason(proposal.source, destination: settings.destination) == nil else { throw SorterError.message("File is outside the source or no longer eligible.") }
+        let historical = try includeHistory && historicalSources().contains(proposal.source)
+        guard (proposal.source.deletingLastPathComponent().standardizedFileURL.path == settings.source.standardizedFileURL.path || historical), FileSafety.skipReason(proposal.source, destination: settings.destination, ignoreDestination: historical) == nil else { throw SorterError.message("File is outside the source or no longer eligible.") }
+        if let reason = DocumentPolicy.skipReason(proposal.source, settings: settings, automatic: false) { throw SorterError.message(reason) }
         guard let category = settings.categories.first(where: { $0.id == proposal.categoryID }) else { throw SorterError.message("Category changed; refresh the preview.") }
         try FileSafety.validatePath(proposal.source)
         let fp = try Fingerprint(proposal.source)
@@ -115,6 +126,7 @@ public actor SorterEngine {
         try FileManager.default.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
         try FileSafety.validateDirectory(destination.deletingLastPathComponent())
         var record = MoveRecord(original: proposal.source, destination: destination, fingerprint: fp, digest: digest, reason: proposal.reason)
+        record.categoryID = proposal.categoryID
         try journal.save(record) // Write-ahead journal must succeed before touching the file.
         do {
             guard try Fingerprint(proposal.source) == fp else { throw SorterError.message("File changed before move.") }
