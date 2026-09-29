@@ -1,8 +1,8 @@
 class LocalFileSorter < Formula
   desc "Sort downloads using rules and on-device Apple Intelligence"
   homepage "https://github.com/OmTheLast/local-file-sorter"
-  url "https://github.com/OmTheLast/local-file-sorter/releases/download/v0.3.0/LocalFileSorter-0.3.0-source.tar.gz"
-  sha256 "a2904edea49d6659594ce2e5be341345cf72df5af0bd9e2a3e33a41074f18f81"
+  url "https://github.com/OmTheLast/local-file-sorter/releases/download/v0.4.0/LocalFileSorter-0.4.0-source.tar.gz"
+  sha256 "262928e48786118a0b2469f35c566191a4e8abf222bb5fdd510031d96269797f"
 
   depends_on arch: :arm64
   depends_on macos: :tahoe
@@ -28,8 +28,8 @@ class LocalFileSorter < Formula
 
   def caveats
     <<~EOS
-      Run local-file-sorter to open the app, then enable automatic sorting.
-      The app is built on your Mac; no Apple Developer membership is needed.
+      Run local-file-sorter to choose folders and review existing documents.
+      Enable automatic sorting in setup for new browser downloads.
       For login startup, add the path printed by local-file-sorter --path
       to System Settings > General > Login Items.
       Quit the app before upgrading or uninstalling. Settings, sorted files
