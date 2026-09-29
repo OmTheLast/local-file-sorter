@@ -1,0 +1,50 @@
+Warning: The following taps are not trusted:
+  anomalyco/tap
+
+Homebrew is currently ignoring formulae, casks and commands
+from these taps because tap trust is required.
+Untap them with:
+  brew untap anomalyco/tap
+Trust specific formulae, casks and commands with:
+  brew trust --formula <user>/<tap>/<formula>
+  brew trust --cask <user>/<tap>/<cask>
+  brew trust --command <user>/<tap>/<command>
+Whole-tap trust is broader and includes all current and future formulae,
+casks and commands from the listed taps. Trust whole taps with:
+  brew trust anomalyco/tap
+For more information, see:
+  https://docs.brew.sh/Tap-Trust
+==> Fetching downloads for: omthelast/local-file-sorter/local-file-sorter
+==> Would upgrade 1 requested outdated package
+omthelast/local-file-sorter/local-file-sorter 0.3.0 -> 0.4.0
+✔︎ Formula local-file-sorter (0.4.0)
+==> Upgrading omthelast/local-file-sorter/local-file-sorter
+  0.3.0 -> 0.4.0 
+Warning: A newer Command Line Tools release is available.
+Update them from Software Update in System Settings.
+
+If that doesn't show you any updates, run:
+  sudo rm -rf /Library/Developer/CommandLineTools
+  sudo xcode-select --install
+
+Alternatively, manually download them from:
+  https://developer.apple.com/download/all/.
+You should download the Command Line Tools for Xcode 26.6.
+==> ./scripts/build-app.sh --homebrew --no-samples
+
+This is a Tier 2 configuration:
+  https://docs.brew.sh/Support-Tiers#tier-2
+You can report issues with Tier 2 configurations to Homebrew/* repositories!
+  https://docs.brew.sh/Troubleshooting
+Read the above document before opening any issues or PRs.
+🍺  /opt/homebrew/Cellar/local-file-sorter/0.4.0: 8 files, 1.7MB, built in 1 minute 4 seconds
+==> Caveats
+==> local-file-sorter
+Run local-file-sorter to choose folders and review existing documents.
+Enable automatic sorting in setup for new browser downloads.
+For login startup, add the path printed by local-file-sorter --path
+to System Settings > General > Login Items.
+Quit the app before upgrading or uninstalling. Settings, sorted files
+and undo history are preserved. Run local-file-sorter after upgrading.
+==> Upgraded 1 requested outdated package
+omthelast/local-file-sorter/local-file-sorter 0.3.0 -> 0.4.0

@@ -1,0 +1,4 @@
+==> Testing omthelast/local-file-sorter/local-file-sorter
+==> /opt/homebrew/Cellar/local-file-sorter/0.4.0/bin/local-file-sorter --version
+==> /usr/bin/codesign --verify --deep --strict /opt/homebrew/Cellar/local-file-s
+==> /usr/bin/lipo -archs '/opt/homebrew/Cellar/local-file-sorter/0.4.0/libexec/L
