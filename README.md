@@ -1,41 +1,59 @@
-# Local File Sorter
+<h1 align="center">Local File Sorter</h1>
 
-**Keep your Downloads organized automatically.**
+**Sort completed Mac downloads into your folders, review uncertain documents, and undo a move from history.**
 
-Local File Sorter is a native Mac app that sorts finished downloads into the right folders. It combines file-type rules with on-device Apple Intelligence to understand documents, with all processing kept on your Mac.
+Apple Silicon. macOS 26+ and macOS 26 SDK. On-device classification; files stay on your Mac. Single-volume moves.
 
-## Features
-
-- **Automatic sorting** — waits for downloads to finish, then organizes new files in the background.
-- **Customizable folders** — start with Invoices, Work, Research, Personal, Study, Images, and Archives, or edit the categories to suit your workflow.
-- **Document understanding** — reads PDFs, text, and common Office formats, with local OCR for scanned PDFs.
-- **Files stay protected** — preserves filenames, never overwrites existing files, and keeps a move history with Undo.
-- **You're in control** — pause from the menu bar, review uncertain files, or preview and sort older files manually.
-- **Local processing** — uses Apple's on-device model when available; rules and manual review continue working without it.
+By Om Patnaik · repository created September 2026.
 
 ## Install
 
-Requires an Apple Silicon Mac running macOS 26 or later, Homebrew, and Command Line Tools with the macOS 26 SDK or newer.
+| Platform / path | Start here |
+| --- | --- |
+| Homebrew | `brew tap omthelast/local-file-sorter https://github.com/OmTheLast/local-file-sorter`, then `brew install omthelast/local-file-sorter/local-file-sorter` |
 
-```sh
-brew tap omthelast/local-file-sorter https://github.com/OmTheLast/local-file-sorter
-brew install omthelast/local-file-sorter/local-file-sorter
-local-file-sorter
+Run `local-file-sorter`, choose source and destination folders, and review existing documents before moving them. Try temporary sample files first with `local-file-sorter --demo`.
+
+```bash
+local-file-sorter --demo
 ```
 
-## Get started
+## Why
 
-1. Open **Local File Sorter**. Setup asks for your source, destination and categories. Defaults are `~/Downloads` → category folders directly in `~/Documents`.
-2. Choose **Save & review documents** to include existing documents and unchanged files previously moved by the app. Check the destinations, select files and **Sort selected**. Nothing in this review moves without approval.
-3. Automatic sorting starts after review when enabled in setup. It handles new, completed browser downloads. Model weights, datasets, code, installers, compressed downloads and subfolders stay untouched.
-4. Uncertain documents go to **Archives**, with the reason shown in **History**. Use **Locations…** to see both paths and open Finder, or **Undo move** to restore a file.
+Your Downloads folder mixes documents worth filing with installers, archives, and unfinished downloads. Local File Sorter waits for completed arrivals and combines file rules with optional Apple Intelligence. Uncertain documents need review; model output can misclassify a file.
 
-Use **Configure…** anytime to change folders and categories. It pauses sorting while you make changes. Browser origin filtering is on by default; supported files with unknown origins remain available for manual review.
+## Review before filing
 
-Close the window to keep sorting from the menu bar. To try the app with temporary sample files, run `local-file-sorter --demo`.
+Setup offers a source, destination, and editable categories. Existing files move only after selection and approval. Automatic sorting handles eligible new downloads; code, datasets, weights, installers, archives, and subfolders stay out of that path.
 
-## Good to know
+## Recover a move
 
-Documents can be misclassified, so review History and Archives periodically. Sorting currently works within a single filesystem volume, and document extraction has size and format limits.
+History records destinations and reasons. Use Undo to restore a moved file, pause from the menu bar, or open Configure to change folders. Unknown-origin files remain available for manual review.
 
-[Latest release](https://github.com/OmTheLast/local-file-sorter/releases/tag/v0.4.0) · [Setup, updates, and removal](docs/RELEASING.md) · [Technical details](docs/TECHNICAL.md) · [Report an issue](https://github.com/OmTheLast/local-file-sorter/issues)
+## Notes from building it
+
+I treated file arrival and file safety as separate parts of the sorter. Preserving names, avoiding overwrites, and recording undo information make classification mistakes recoverable. I would broaden the extraction tests before accepting more document formats.
+
+## Commands
+
+```bash
+local-file-sorter               # open setup and the menu-bar app
+local-file-sorter --demo        # try temporary sample files
+swift run SorterTests           # run deterministic safety checks without AI
+swift run SorterCheck           # optional on-device classifier fixture evaluation
+scripts/build-app.sh            # build an app from source
+```
+
+## Verify it yourself
+
+```bash
+swift run SorterTests
+```
+
+The safety executable checks collisions, approval, undo, recovery, extraction, and automatic-arrival handling with AI disabled. `SorterCheck` separately evaluates classification on synthetic fixtures and can use Apple Intelligence. Packaging and interaction evidence is documented under `docs/` and `automatic-ui-results.txt`; model availability and permissions depend on the Mac.
+
+## Credits, license and pointers
+
+Built with Swift, SwiftUI, Apple Foundation Models, and local document extraction. No source license file is present. [Technical details](docs/TECHNICAL.md) · [Release instructions](docs/RELEASING.md).
+
+[Full setup, original notes, and project history](README-DETAILS.md).
